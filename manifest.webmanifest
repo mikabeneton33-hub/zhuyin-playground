@@ -1,0 +1,17 @@
+{
+  "name": "ㄅㄆㄇ 注音樂園",
+  "short_name": "注音樂園",
+  "description": "給小朋友的注音符號學習網站",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFF8EC",
+  "theme_color": "#FFF8EC",
+  "lang": "zh-Hant-TW",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
