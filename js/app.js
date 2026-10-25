@@ -2,6 +2,7 @@ import { GROUPS, SYMBOLS, TONES, SYLLABLES, INITIALS, MEDIALS, FINALS, bySymbol 
 import { tts, sfx } from "./audio.js";
 import { burst } from "./confetti.js";
 import { store } from "./store.js";
+import { ANIMALS, TONE_MARK, sylText, sylKey, readingText } from "./animals.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -12,6 +13,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 let toastT;
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800); }
 function say(text) { tts.warmup(); return tts.speak(text); }
+function saySym(s) { tts.warmup(); return tts.speakSymbol(s.s, s.say); }
 function renderStars() { $("#stars").textContent = store.get().stars; }
 addEventListener("zp:progress", renderStars);
 
@@ -43,13 +45,13 @@ function openSheet(s) {
       <button class="btn ${c}" id="sh-sym">🔊 唸 ${s.s}</button>
       <button class="btn ghost" id="sh-word">🗣️ 唸「${s.word}」</button>
     </div>`;
-  $("#sh-sym", sh).onclick = () => say(s.say);
+  $("#sh-sym", sh).onclick = () => saySym(s);
   $("#sh-word", sh).onclick = () => say(s.word);
   sh.classList.add("open"); $("#backdrop").classList.add("open");
   const first = !store.get().learned[s.s];
   store.learn(s.s);
   if (first) { store.addStars(1); toast("⭐ 學到新符號 +1"); }
-  say(s.say).then(() => wait(250)).then(() => say(s.word));
+  saySym(s).then(() => wait(250)).then(() => say(s.word));
   viewLearn();
 }
 function closeSheet() { $("#sheet").classList.remove("open"); $("#backdrop").classList.remove("open"); tts.stop(); }
@@ -115,7 +117,7 @@ function viewQuiz() {
   v.append(el("div", "quiz-top", `<span>第 ${quiz.idx + 1} / ${quiz.qs.length} 題</span><span>答對 ${quiz.correct}</span>`));
   const pb = el("div", "progressbar", `<i style="width:${quiz.idx / quiz.qs.length * 100}%"></i>`); v.append(pb);
   const sp = el("button", "speaker", "🔊"); sp.setAttribute("aria-label", "再聽一次");
-  const play = async () => { sp.classList.add("playing"); await say(q.ans.say); await wait(200); await say(q.ans.word); sp.classList.remove("playing"); };
+  const play = async () => { sp.classList.add("playing"); await saySym(q.ans); await wait(200); await say(q.ans.word); sp.classList.remove("playing"); };
   sp.onclick = play; v.append(sp, el("div", "speaker-hint", "點喇叭再聽一次"));
   const opts = el("div", "options");
   for (const o of q.opts) {
@@ -174,7 +176,7 @@ function viewMatch() {
     card.onclick = async () => {
       if (match.lock || match.done.has(c.k) || match.open.includes(i)) return;
       sfx.flip(); card.classList.add("flipped"); match.open.push(i);
-      say(c.type === "sym" ? c.s.say : c.s.word);
+      c.type === "sym" ? saySym(c.s) : say(c.s.word);
       if (match.open.length < 2) return;
       match.lock = true; match.moves++;
       const [a, b] = match.open.map(j => match.cards[j]);
@@ -199,6 +201,133 @@ function viewMatch() {
   v.append(board);
 }
 
+
+// ================================================================= 小一動物復習
+const ANIMAL_TONES = [...TONES, { n: 5, mark: "˙", name: "輕聲", hint: "輕輕的" }];
+const ANIMAL_N = 8;
+let an = null; // { mode: "pick"|"spell", list, idx, correct, ... }
+function zyHTML(syls, cls = "") {
+  return `<div class="zy ${cls}">${syls.map(sy => `<div class="zy-syl${sy.t === 5 ? " light" : ""}">
+    ${sy.t === 5 ? `<i class="tone top">˙</i>` : ""}
+    <span class="zy-col">${[sy.i, sy.m, sy.f].filter(Boolean).map(ch => `<b>${ch}</b>`).join("")}</span>
+    ${sy.t > 1 && sy.t < 5 ? `<i class="tone">${TONE_MARK[sy.t]}</i>` : ""}</div>`).join("")}</div>`;
+}
+function newAnimals(mode) {
+  an = { mode, list: shuffle(ANIMALS).slice(0, ANIMAL_N), idx: 0, correct: 0, locked: false, cur: null, sylIdx: 0, done: [] };
+}
+function mutateReading(syls) { // 產生一個「像但不對」的注音
+  const out = syls.map(x => ({ ...x }));
+  const k = Math.random() * out.length | 0, sy = out[k];
+  const r = Math.random();
+  if (r < 0.4) { const ts = [1, 2, 3, 4].filter(t => t !== sy.t); sy.t = ts[Math.random() * ts.length | 0]; }
+  else if (r < 0.7 && sy.f) { const fs = FINALS.filter(f => f !== sy.f); sy.f = fs[Math.random() * fs.length | 0]; }
+  else if (sy.i) { const is = INITIALS.filter(i => i !== sy.i); sy.i = is[Math.random() * is.length | 0]; }
+  else { const ms = MEDIALS.filter(m => m !== sy.m); sy.m = ms[Math.random() * ms.length | 0]; }
+  return out;
+}
+function pickOptions(a) {
+  const key = x => x.map(sylKey).join(" ");
+  const seen = new Set([key(a.syl)]); const opts = [a.syl];
+  let guard = 0;
+  while (opts.length < 3 && guard++ < 50) {
+    let cand = Math.random() < 0.3 ? ANIMALS[Math.random() * ANIMALS.length | 0].syl : mutateReading(a.syl);
+    if (cand.length !== a.syl.length) cand = mutateReading(a.syl);
+    if (!seen.has(key(cand))) { seen.add(key(cand)); opts.push(cand); }
+  }
+  return shuffle(opts);
+}
+function viewAnimals() {
+  const v = $("#v-animals"); v.innerHTML = "";
+  v.append(el("h2", "h2", "小一動物復習"), el("p", "sub", "課本裡的動物，拼音都記得嗎？"));
+  const pills = el("div", "pills");
+  for (const [m, label, c] of [["pick", "👀 選一選", "coral"], ["spell", "⌨️ 拼一拼", "violet"]]) {
+    const b = el("button", `pill ${c}${an?.mode === m ? " on" : ""}`, label);
+    b.onclick = () => { sfx.tap(); newAnimals(m); viewAnimals(); }; pills.append(b);
+  }
+  v.append(pills);
+  if (!an) { v.append(el("div", "empty-hint", "選一種玩法開始：<b>選一選</b>看動物挑出正確注音；<b>拼一拼</b>自己用注音鍵盤拼出來。")); return; }
+  if (an.idx >= an.list.length) return animalsSummary(v);
+  const a = an.list[an.idx];
+  v.append(el("div", "quiz-top", `<span>第 ${an.idx + 1} / ${an.list.length} 題</span><span>答對 ${an.correct}</span>`));
+  v.append(el("div", "progressbar", `<i style="width:${an.idx / an.list.length * 100}%"></i>`));
+  const hero = el("button", "animal-hero", `<span class="em">${a.emoji}</span><span class="nm">${a.name}</span><span class="hint">🔊 點我聽</span>`);
+  hero.onclick = () => say(a.name); v.append(hero);
+  if (an.mode === "pick") animalsPick(v, a); else animalsSpell(v, a);
+  if (an.idx === 0 && !an.spoke) { an.spoke = true; setTimeout(() => say(a.name), 300); }
+}
+function animalsPick(v, a) {
+  if (!an.opts) an.opts = pickOptions(a);
+  const wrap = el("div", "zy-options");
+  const correctKey = a.syl.map(sylKey).join(" ");
+  for (const o of an.opts) {
+    const b = el("button", "zy-opt", zyHTML(o));
+    b.onclick = async () => {
+      if (an.locked) return; an.locked = true; [...wrap.children].forEach(x => x.disabled = true);
+      const ok = o.map(sylKey).join(" ") === correctKey;
+      if (ok) { b.classList.add("ok"); sfx.correct(); an.correct++; const r = b.getBoundingClientRect(); burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, n: 50 }); await say(a.name); await wait(300); }
+      else { b.classList.add("bad"); sfx.wrong(); [...wrap.children].find(x => x.dataset.k === correctKey).classList.add("ok"); await say(a.name); await wait(900); }
+      an.idx++; an.opts = null; an.locked = false; say(an.list[an.idx]?.name); viewAnimals();
+    };
+    b.dataset.k = o.map(sylKey).join(" "); wrap.append(b);
+  }
+  v.append(wrap);
+}
+function animalsSpell(v, a) {
+  if (!an.cur) { an.cur = { i: null, m: null, f: null, t: 1 }; an.sylIdx = 0; an.done = []; }
+  const target = a.syl[an.sylIdx];
+  const stage = el("div", "spell-stage");
+  // 已完成的字 + 目前的字
+  const line = el("div", "zy-progress");
+  line.innerHTML = a.syl.map((sy, i) => i < an.sylIdx ? zyHTML([sy], "small done") : i === an.sylIdx ? `<div class="zy small now">第 ${i + 1} 個字</div>` : `<div class="zy small todo">?</div>`).join("");
+  stage.append(line);
+  const slots = el("div", "spell-slots");
+  const mk = (val, c, lab) => { const sl = el("div", `slot ${c}${val ? " filled" : ""}`, val || "·"); sl.append(el("small", "", lab)); return sl; };
+  const c = an.cur;
+  slots.append(mk(c.i, "coral", "聲母"), mk(c.m, "mint", "介音"), mk(c.f, "sunny", "韻母"));
+  const ts = el("div", "slot tone violet filled", ANIMAL_TONES[c.t - 1].mark || "ˉ"); ts.append(el("small", "", "聲調")); slots.append(ts);
+  stage.append(slots);
+  const act = el("div", "row"); act.style.marginTop = "6px";
+  const ok = el("button", "btn violet", an.sylIdx + 1 < a.syl.length ? "✓ 下一個字" : "✓ 完成");
+  ok.disabled = !(c.i || c.m || c.f);
+  ok.onclick = async () => {
+    const right = (c.i || "") === target.i && (c.m || "") === target.m && (c.f || "") === target.f && c.t === target.t;
+    if (!right) {
+      sfx.wrong(); stage.classList.add("shake"); setTimeout(() => stage.classList.remove("shake"), 450);
+      an.miss = (an.miss || 0) + 1;
+      if (an.miss >= 2) { toast(`提示：第 ${an.sylIdx + 1} 個字是 ${sylText(target)}`); }
+      return;
+    }
+    sfx.correct(); an.miss = 0; an.sylIdx++; an.cur = { i: null, m: null, f: null, t: 1 };
+    if (an.sylIdx >= a.syl.length) {
+      an.correct++; burst({ n: 90 }); await say(a.name); await wait(400);
+      an.idx++; an.cur = null; say(an.list[an.idx]?.name);
+    }
+    viewAnimals();
+  };
+  const clr = el("button", "btn ghost", "清除"); clr.style.flex = "0 0 auto"; clr.onclick = () => { an.cur = { i: null, m: null, f: null, t: 1 }; viewAnimals(); };
+  act.append(ok, clr); stage.append(act); v.append(stage);
+  const row = (title, col, items, part, isTone) => {
+    const w = el("div", "spell-row"); w.append(el("h4", "", `<span style="width:8px;height:16px;border-radius:4px;background:var(--${col});display:inline-block"></span>${title}`));
+    const chips = el("div", "chips");
+    for (const it of items) {
+      const val = isTone ? it.n : it;
+      const chip = el("button", `chip ${col}${isTone ? " tone-chip" : ""}`, isTone ? `${it.mark || "ˉ"}<small>${it.name}</small>` : it);
+      if ((isTone ? c.t : c[part]) === val) chip.classList.add("on");
+      chip.onclick = () => { sfx.tap(); if (isTone) c.t = val; else c[part] = c[part] === val ? null : val; viewAnimals(); };
+      chips.append(chip);
+    }
+    w.append(chips); return w;
+  };
+  v.append(row("聲母", "coral", INITIALS, "i"), row("介音", "mint", MEDIALS, "m"), row("韻母", "sunny", FINALS, "f"), row("聲調", "violet", ANIMAL_TONES, "t", true));
+}
+function animalsSummary(v) {
+  const c = an.correct, n = an.list.length, stars = c === n ? 3 : c >= n * .6 ? 2 : 1;
+  store.addStars(stars); store.animals(an.mode, c, n);
+  if (c === n) { sfx.win(); burst({ n: 160 }); } else sfx.correct();
+  const s = el("div", "summary", `<div class="big-emoji">${c === n ? "🏆" : "🐾"}</div><h3>${c === n ? "全部答對！" : "做得好！"}</h3><p>${n} 隻動物答對 ${c} 隻</p><div class="earned">${"⭐".repeat(stars)}</div>`);
+  const b = el("button", "btn coral", "再來一輪"); b.onclick = () => { sfx.tap(); newAnimals(an.mode); viewAnimals(); }; s.append(b); v.append(s);
+}
+
 // ================================================================= 我的進度
 function viewProgress() {
   const v = $("#v-progress"); v.innerHTML = ""; const d = store.get();
@@ -208,6 +337,7 @@ function viewProgress() {
     <div class="stat"><div class="v">⭐ ${d.stars}</div><div class="k">總星星</div></div>
     <div class="stat"><div class="v">${store.learnedCount()}<span style="font-size:16px;color:var(--ink-2)"> / 37</span></div><div class="k">學過的符號</div></div>
     <div class="stat"><div class="v">${acc}%</div><div class="k">聽音答對率（${d.quiz.played} 題）</div></div>
+    <div class="stat"><div class="v">${(d.animals?.correct) || 0}<span style="font-size:16px;color:var(--ink-2)"> / ${(d.animals?.played) || 0}</span></div><div class="k">動物復習答對</div></div>
     <div class="stat"><div class="v">${d.match.wins}</div><div class="k">翻翻樂完成次數${d.match.bestMoves != null ? `・最佳 ${d.match.bestMoves} 次` : ""}</div></div>`));
   v.append(el("div", "group-title", "學過的符號"));
   const g = el("div", "learned-grid"); for (const s of SYMBOLS) g.append(el("span", d.learned[s.s] ? "y" : "", s.s)); v.append(g);
@@ -217,7 +347,7 @@ function viewProgress() {
 }
 
 // ================================================================= 路由 / 啟動
-const VIEWS = { learn: viewLearn, spell: viewSpell, quiz: viewQuiz, match: viewMatch, progress: viewProgress };
+const VIEWS = { learn: viewLearn, spell: viewSpell, quiz: viewQuiz, match: viewMatch, animals: viewAnimals, progress: viewProgress };
 function go(name, push = true) {
   tts.stop(); closeSheet();
   document.querySelectorAll(".view").forEach(x => x.classList.toggle("active", x.id === "v-" + name));

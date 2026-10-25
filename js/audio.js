@@ -42,6 +42,24 @@ export const tts = {
       synth.speak(u);
     });
   },
+  /** 唸單一注音符號：先試符號本身（較乾淨），引擎若跳過沒出聲（onstart→onend < 150ms）就退回呼讀音字。 */
+  speakSymbol(symbol, fallbackText, opts = {}) {
+    return new Promise(resolve => {
+      if (!synth) return resolve(false);
+      try { synth.cancel(); } catch {}
+      const u = new SpeechSynthesisUtterance(symbol);
+      u.lang = "zh-TW"; const v = pickVoice(); if (v) u.voice = v;
+      u.rate = opts.rate ?? 0.8; u.pitch = opts.pitch ?? 1.05;
+      let t0 = 0, done = false;
+      const fallback = () => { if (done) return; done = true; this.speak(fallbackText, opts).then(resolve); };
+      const finish = () => { if (done) return; done = true; resolve(true); };
+      u.onstart = () => { t0 = performance.now(); };
+      u.onend = () => { (t0 && performance.now() - t0 >= 150) ? finish() : fallback(); };
+      u.onerror = fallback;
+      setTimeout(() => { if (!done) (t0 ? finish() : fallback()); }, 2500);
+      synth.speak(u);
+    });
+  },
   stop() { try { synth?.cancel(); } catch {} },
   /** iOS 需要在使用者手勢中「暖機」一次才會出聲。 */
   warmup() {
