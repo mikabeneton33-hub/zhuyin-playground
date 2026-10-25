@@ -43,13 +43,13 @@ function openSheet(s) {
       <button class="btn ${c}" id="sh-sym">🔊 唸 ${s.s}</button>
       <button class="btn ghost" id="sh-word">🗣️ 唸「${s.word}」</button>
     </div>`;
-  $("#sh-sym", sh).onclick = () => say(s.s);
+  $("#sh-sym", sh).onclick = () => say(s.say);
   $("#sh-word", sh).onclick = () => say(s.word);
   sh.classList.add("open"); $("#backdrop").classList.add("open");
   const first = !store.get().learned[s.s];
   store.learn(s.s);
   if (first) { store.addStars(1); toast("⭐ 學到新符號 +1"); }
-  say(s.s).then(() => wait(250)).then(() => say(s.word));
+  say(s.say).then(() => wait(250)).then(() => say(s.word));
   viewLearn();
 }
 function closeSheet() { $("#sheet").classList.remove("open"); $("#backdrop").classList.remove("open"); tts.stop(); }
@@ -115,7 +115,7 @@ function viewQuiz() {
   v.append(el("div", "quiz-top", `<span>第 ${quiz.idx + 1} / ${quiz.qs.length} 題</span><span>答對 ${quiz.correct}</span>`));
   const pb = el("div", "progressbar", `<i style="width:${quiz.idx / quiz.qs.length * 100}%"></i>`); v.append(pb);
   const sp = el("button", "speaker", "🔊"); sp.setAttribute("aria-label", "再聽一次");
-  const play = async () => { sp.classList.add("playing"); await say(q.ans.s); await wait(200); await say(q.ans.word); sp.classList.remove("playing"); };
+  const play = async () => { sp.classList.add("playing"); await say(q.ans.say); await wait(200); await say(q.ans.word); sp.classList.remove("playing"); };
   sp.onclick = play; v.append(sp, el("div", "speaker-hint", "點喇叭再聽一次"));
   const opts = el("div", "options");
   for (const o of q.opts) {
@@ -130,7 +130,7 @@ function viewQuiz() {
       } else {
         b.classList.add("bad"); sfx.wrong();
         [...opts.children].find(x => x.textContent === q.ans.s).classList.add("ok");
-        await say(`是 ${q.ans.s}，${q.ans.word}`); await wait(500);
+        await say(`是 ${q.ans.say}，${q.ans.word}`); await wait(500);
       }
       quiz.idx++; quiz.locked = false; viewQuiz();
     };
@@ -174,7 +174,7 @@ function viewMatch() {
     card.onclick = async () => {
       if (match.lock || match.done.has(c.k) || match.open.includes(i)) return;
       sfx.flip(); card.classList.add("flipped"); match.open.push(i);
-      say(c.type === "sym" ? c.s.s : c.s.word);
+      say(c.type === "sym" ? c.s.say : c.s.word);
       if (match.open.length < 2) return;
       match.lock = true; match.moves++;
       const [a, b] = match.open.map(j => match.cards[j]);
@@ -226,8 +226,19 @@ function go(name, push = true) {
   if (push) history.replaceState(null, "", "#" + name);
   scrollTo({ top: 0, behavior: "smooth" });
 }
+function inAppBrowser() {
+  const ua = navigator.userAgent;
+  return /\bLine\//i.test(ua) || /FBAN|FBAV|Instagram|MicroMessenger/i.test(ua) || (/\bwv\b/.test(ua) && /Android/.test(ua));
+}
+function showBrowserBanner() {
+  if (!inAppBrowser() || location.search.includes("openExternalBrowser")) return;
+  const u = new URL(location.href); u.searchParams.set("openExternalBrowser", "1");
+  const b = el("div", "empty-hint", `🔈 在 LINE 等 App 內建瀏覽器裡可能沒有聲音。<br><a href="${u.href}" target="_blank" rel="noopener" style="color:inherit;font-weight:900;text-decoration:underline">用 Chrome / Safari 開啟 →</a>`);
+  $("main").prepend(b);
+}
 function boot() {
   renderStars();
+  showBrowserBanner();
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => { sfx.tap(); go(t.dataset.v); });
   $("#backdrop").onclick = closeSheet;
   const m = $("#mute"); const paint = () => m.textContent = sfx.muted ? "🔇" : "🔊";
