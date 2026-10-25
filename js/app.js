@@ -8,6 +8,9 @@ const $ = (s, r = document) => r.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; };
 const groupColor = g => GROUPS.find(x => x.id === g).color;
+// 插圖：OpenMoji（CC BY-SA 4.0），所有裝置風格一致。檔名 = 去掉 FE0F 的 codepoint。
+const emojiHex = e => [...e].map(c => c.codePointAt(0)).filter(cp => cp !== 0xFE0F).map(cp => cp.toString(16).toUpperCase()).join("-");
+const pic = (emoji, cls = "") => `<img class="pic ${cls}" src="img/openmoji/${emojiHex(emoji)}.svg" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('${emoji}'))">`;
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 let toastT;
@@ -40,7 +43,7 @@ function openSheet(s) {
   const sh = $("#sheet"), c = groupColor(s.g);
   sh.innerHTML = `<div class="grab"></div>
     <div class="big ${c}">${s.s}</div>
-    <div class="word"><div class="emoji">${s.emoji}</div><div class="wz"><b>${s.word}</b><span>${s.zy}</span></div></div>
+    <div class="word"><div class="emoji">${pic(s.emoji, "pic-lg")}</div><div class="wz"><b>${s.word}</b><span>${s.zy}</span></div></div>
     <div class="actions">
       <button class="btn ${c}" id="sh-sym">🔊 唸 ${s.s}</button>
       <button class="btn ghost" id="sh-word">🗣️ 唸「${s.word}」</button>
@@ -169,7 +172,7 @@ function viewMatch() {
   const board = el("div", "board");
   match.cards.forEach((c, i) => {
     const card = el("button", "card"); card.setAttribute("aria-label", c.type === "sym" ? `卡片 ${c.s.s}` : `卡片 ${c.s.word}`);
-    const front = c.type === "sym" ? `<span>${c.s.s}</span>` : `<span class="em">${c.s.emoji}</span><span class="w">${c.s.word}</span>`;
+    const front = c.type === "sym" ? `<span>${c.s.s}</span>` : `<span class="em">${pic(c.s.emoji, "pic-md")}</span><span class="w">${c.s.word}</span>`;
     card.innerHTML = `<div class="inner"><div class="face back"></div><div class="face front">${front}</div></div>`;
     if (match.done.has(c.k)) card.classList.add("done");
     if (match.open.includes(i)) card.classList.add("flipped");
@@ -250,7 +253,7 @@ function viewAnimals() {
   const a = an.list[an.idx];
   v.append(el("div", "quiz-top", `<span>第 ${an.idx + 1} / ${an.list.length} 題</span><span>答對 ${an.correct}</span>`));
   v.append(el("div", "progressbar", `<i style="width:${an.idx / an.list.length * 100}%"></i>`));
-  const hero = el("button", "animal-hero", `<span class="em">${a.emoji}</span><span class="nm">${a.name}</span><span class="hint">🔊 點我聽</span>`);
+  const hero = el("button", "animal-hero", `<span class="em">${pic(a.emoji, "pic-xl")}</span><span class="nm">${a.name}</span><span class="hint">🔊 點我聽</span>`);
   hero.onclick = () => say(a.name); v.append(hero);
   if (an.mode === "pick") animalsPick(v, a); else animalsSpell(v, a);
   if (an.idx === 0 && !an.spoke) { an.spoke = true; setTimeout(() => say(a.name), 300); }
@@ -341,6 +344,7 @@ function viewProgress() {
     <div class="stat"><div class="v">${d.match.wins}</div><div class="k">翻翻樂完成次數${d.match.bestMoves != null ? `・最佳 ${d.match.bestMoves} 次` : ""}</div></div>`));
   v.append(el("div", "group-title", "學過的符號"));
   const g = el("div", "learned-grid"); for (const s of SYMBOLS) g.append(el("span", d.learned[s.s] ? "y" : "", s.s)); v.append(g);
+  v.append(el("p", "credit", '插圖：<a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a>（CC BY-SA 4.0）・發音：裝置內建語音'));
   const r = el("button", "btn ghost", "清除所有進度"); r.style.marginTop = "22px";
   r.onclick = () => { if (confirm("確定要清除所有星星和進度嗎？")) { store.reset(); viewProgress(); viewLearn(); toast("已清除"); } };
   v.append(r);
