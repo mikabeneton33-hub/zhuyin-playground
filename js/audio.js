@@ -141,9 +141,9 @@ export const voice = {
   set mode(v) { mode = v; try { localStorage.setItem("zp.voice", v); } catch {} },
   hasHuman(text, zy) { return !!findIds(text, zy); },
   /** 唸字詞：text 國字、zy 注音、ttsText 給合成語音用的字（可省略）。 */
-  async word(text, zy, ttsText) {
+  async word(text, zy, ttsText, opts = {}) {
     tts.stop(); stopFile();
-    if (mode === "human") {
+    if (mode === "human" || opts.human) {
       const ids = findIds(text, zy);
       if (ids) { for (const id of ids) { const ok = await playFile(id); if (!ok) break; } return true; }
     }

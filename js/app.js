@@ -4,6 +4,7 @@ import { burst } from "./confetti.js";
 import { store } from "./store.js";
 import { ANIMALS, TONE_MARK, sylText, sylKey, readingText } from "./animals.js";
 import { BOOK, UNITS, TONE_LESSON, findItem, LESSON_SYMBOLS, LESSON_ORDER, WORDS } from "./textbook.js";
+import { makePlay } from "./play.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -55,7 +56,7 @@ function openSheet(s) {
   $("#sh-word", sh).onclick = () => sayW(s.word, s.zy);
   sh.classList.add("open"); $("#backdrop").classList.add("open");
   const first = !store.get().learned[s.s];
-  store.learn(s.s);
+  store.learn(s.s); store.event("learn");
   if (first) { store.addStars(1); toast("⭐ 學到新符號 +1"); }
   saySym(s).then(() => wait(250)).then(() => sayW(s.word, s.zy));
   viewLearn();
@@ -149,7 +150,7 @@ function viewQuiz() {
 }
 function quizSummary(v) {
   const c = quiz.correct, n = quiz.qs.length, stars = c === n ? 3 : c >= n * .6 ? 2 : 1;
-  store.quizResult(c, n); store.addStars(stars);
+  store.quizResult(c, n); store.addStars(stars); store.event("quiz"); if (c === n) store.awardSticker();
   if (c === n) { sfx.win(); burst({ n: 160 }); } else sfx.correct();
   const s = el("div", "summary", `<div class="big-emoji">${c === n ? "🏆" : c >= n * .6 ? "🎉" : "💪"}</div>
     <h3>${c === n ? "全部答對！" : c >= n * .6 ? "好厲害！" : "再試一次吧"}</h3><p>${n} 題答對 ${c} 題</p>
@@ -311,7 +312,7 @@ function animalsSpell(v, a) {
     }
     sfx.correct(); an.miss = 0; an.sylIdx++; an.cur = { i: null, m: null, f: null, t: 1 };
     if (an.sylIdx >= a.syl.length) {
-      an.correct++; burst({ n: 90 }); await sayW(a.name, readingText(a), a.say); await wait(400);
+      an.correct++; store.event("spell"); burst({ n: 90 }); await sayW(a.name, readingText(a), a.say); await wait(400);
       an.idx++; an.cur = null; (an.list[an.idx] && sayW(an.list[an.idx].name, readingText(an.list[an.idx]), an.list[an.idx].say));
     }
     viewAnimals();
@@ -336,10 +337,18 @@ function animalsSpell(v, a) {
 function animalsSummary(v) {
   const c = an.correct, n = an.list.length, stars = c === n ? 3 : c >= n * .6 ? 2 : 1;
   store.addStars(stars); if (!an.custom) store.animals(an.mode, c, n);
+  let unlockMsg = "";
+  if (an.custom && an.itemId) {
+    store.event("book");
+    const pass = c >= Math.ceil(n * 0.6);
+    const { firstPass } = store.lessonResult(an.itemId, pass ? stars : 0);
+    if (firstPass) { store.awardSticker(); const i = LESSON_ORDER.indexOf(an.itemId); unlockMsg = i >= 0 && i < 8 ? `<p class="unlock">🔓 解鎖第${"一二三四五六七八九"[i + 1]}課！</p>` : `<p class="unlock">🎉 過關了！</p>`; }
+    else if (!pass) unlockMsg = `<p class="unlock dim">答對 6 成以上就能過關喔</p>`;
+  } else if (c === n) store.awardSticker();
   if (c === n) { sfx.win(); burst({ n: 160 }); } else sfx.correct();
-  const s = el("div", "summary", `<div class="big-emoji">${c === n ? "🏆" : "🐾"}</div><h3>${c === n ? "全部答對！" : "做得好！"}</h3><p>${n} 隻動物答對 ${c} 隻</p><div class="earned">${"⭐".repeat(stars)}</div>`);
+  const s = el("div", "summary", `<div class="big-emoji">${c === n ? "🏆" : "🐾"}</div><h3>${c === n ? "全部答對！" : "做得好！"}</h3><p>${n} 題答對 ${c} 題</p><div class="earned">${"⭐".repeat(stars)}</div>${unlockMsg}`);
   const b = el("button", "btn coral", "再來一輪");
-  b.onclick = () => { sfx.tap(); if (an.custom) { const o = an; newAnimals(o.mode); Object.assign(an, { host: o.host, title: o.title, custom: true, allowed: o.allowed, list: shuffle(o.list) }); } else newAnimals(an.mode); viewAnimals(); };
+  b.onclick = () => { sfx.tap(); if (an.custom) { const o = an; newAnimals(o.mode); Object.assign(an, { host: o.host, title: o.title, custom: true, itemId: o.itemId, allowed: o.allowed, list: shuffle(o.list) }); } else newAnimals(an.mode); viewAnimals(); };
   s.append(b); v.append(s);
 }
 
@@ -375,29 +384,56 @@ const LESSON_WORDS = (() => {
   }
   return out;
 })();
-let bookAt = null; // null = 目錄；否則 item id
+let bookAt = null; // null = 地圖；否則 item id
+function isUnlocked(it) {
+  if (store.get().unlockAll || !it) return true;
+  if (it.kind === "lesson") { const i = LESSON_ORDER.indexOf(it.id); return i <= 0 || store.lessonStars(LESSON_ORDER[i - 1]) >= 1; }
+  if (it.kind === "review") return it.lessons.every(id => store.lessonStars(id) >= 1);
+  return true;
+}
+function unlockedUpTo() { let n = 1; LESSON_ORDER.forEach((id, i) => { if (isUnlocked(findItem(id))) n = i + 1; }); return n; }
+function symbolsUpTo(n) { const L = LEARNED[LESSON_ORDER[Math.min(9, Math.max(1, n)) - 1]]; return SYMBOLS.filter(x => L.sym.has(x.s)).map(x => x.s); }
+const UNIT_COLORS = { intro: "sunny", u1: "coral", u2: "mint", u3: "violet", end: "sky" };
 function viewBook() {
   const v = $("#v-book");
   if (an?.host === "#v-book") return viewAnimals();
   v.innerHTML = "";
   if (bookAt) return bookDetail(v, findItem(bookAt));
-  v.append(el("h2", "h2", "課本"), el("p", "sub", `${BOOK.name}・${BOOK.grade}`));
+  v.append(el("h2", "h2", "闖關地圖"), el("p", "sub", `${BOOK.name}・每課答對 6 成就能解鎖下一課`));
+  const map = el("div", "map");
+  let k = 0; const nodes = [];
   for (const u of UNITS) {
-    const t = el("div", "group-title", `<span class="bar" style="background:var(--violet)"></span>${u.title}`);
-    if (u.zy) t.insertAdjacentHTML("beforeend", `<span class="unit-zy">${zyHTML(zyLine(u.zy), "tiny")}</span>`);
-    v.append(t);
-    const list = el("div", "book-list");
+    const col = UNIT_COLORS[u.id] || "violet";
+    const head = el("div", `map-unit ${col}`, `<b>${u.title}</b>${u.zy ? zyHTML(zyLine(u.zy), "tiny") : ""}`);
+    map.append(head);
     for (const it of u.items) {
-      const c = el("button", `book-item ${it.kind}`);
-      const tag = it.no ? `<span class="no">第${it.no}課</span>` : `<span class="no ic">${it.kind === "tones" ? "🎵" : it.kind === "review" ? "⭐" : "🏠"}</span>`;
-      const news = it.kind === "lesson" ? `<span class="news">${[...LESSON_SYMBOLS[it.id].i, ...LESSON_SYMBOLS[it.id].f].join(" ")}</span>` : "";
-      c.innerHTML = `${tag}<span class="ttl">${zyHTML(zyLine(it.zy), "row")}${news}</span><span class="pg">p.${it.page}</span>`;
-      c.onclick = () => { sfx.tap(); if (it.kind === "link") return go(it.to); bookAt = it.id; viewBook(); scrollTo({ top: 0 }); sayW(it.say, it.zy); };
-      list.append(c);
+      const lock = !isUnlocked(it), st = it.kind === "lesson" || it.kind === "review" ? store.lessonStars(it.id) : 0;
+      const pos = ["c", "r", "c", "l"][k++ % 4];
+      const node = el("div", `map-node ${pos}`);
+      const label = it.no ? "一二三四五六七八九".indexOf(it.no) + 1 : it.kind === "tones" ? "🎵" : it.kind === "review" ? "★" : "🏠";
+      const btn = el("button", `node-btn ${col}${lock ? " locked" : ""}${st ? " cleared" : ""}`, lock ? "🔒" : `<span>${label}</span>`);
+      const stars = it.kind === "lesson" || it.kind === "review" ? `<div class="node-stars">${[1, 2, 3].map(i => i <= st ? "★" : "☆").join("")}</div>` : "";
+      node.append(btn, el("div", "node-cap", `${zyHTML(zyLine(it.zy), "tiny")}${stars}<span class="pg">p.${it.page}</span>`));
+      btn.onclick = () => {
+        if (lock) { sfx.wrong(); btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake"); return toast("先完成前面的課，就能解鎖喔！"); }
+        sfx.tap(); if (it.kind === "link") return go(it.to); bookAt = it.id; viewBook(); scrollTo({ top: 0 }); sayW(it.say, it.zy);
+      };
+      map.append(node); nodes.push(btn);
     }
-    v.append(list);
   }
-  v.append(el("p", "credit", "課名與各課符號依南一版國語首冊（p.4–5、p.93）。課文與插圖未收錄；練習詞為本站自編，只用到該課為止學過的符號，讀音依教育部辭典。"));
+  v.append(map);
+  // 虛線小路
+  requestAnimationFrame(() => {
+    const r0 = map.getBoundingClientRect(); const pts = nodes.map(n => { const r = n.getBoundingClientRect(); return [r.left - r0.left + r.width / 2, r.top - r0.top + r.height / 2]; });
+    if (pts.length < 2) return;
+    let d = `M${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i]; const my = (y0 + y1) / 2; d += ` C${x0} ${my} ${x1} ${my} ${x1} ${y1}`; }
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "map-path"); svg.setAttribute("width", r0.width); svg.setAttribute("height", map.scrollHeight);
+    svg.innerHTML = `<path d="${d}"/>`; map.prepend(svg);
+  });
+  const credit = el("p", "credit", "課名與各課符號依南一版國語首冊（p.4–5、p.93）。課文與插圖未收錄；練習詞為本站自編，只用到該課為止學過的符號，讀音依教育部辭典。");
+  v.append(credit);
 }
 function backBtn(v) { const b = el("button", "pill", "← 回目錄"); b.onclick = () => { sfx.tap(); bookAt = null; tts.stop(); viewBook(); }; v.append(b); }
 function symTiles(title, list, cls) {
@@ -412,7 +448,7 @@ function symTiles(title, list, cls) {
 }
 function startBookGame(mode, words, title) {
   newAnimals(mode); an.list = shuffle(words).slice(0, Math.min(8, words.length));
-  an.host = "#v-book"; an.title = title; an.custom = true;
+  an.host = "#v-book"; an.title = title; an.custom = true; an.itemId = bookAt;
   an.allowed = new Set([...words.flatMap(w => w.syl.flatMap(sy => [sy.i, sy.m, sy.f]))].filter(Boolean));
   viewAnimals(); scrollTo({ top: 0 });
 }
@@ -477,33 +513,72 @@ function bookTones(v) {
 // ================================================================= 我的進度
 function viewProgress() {
   const v = $("#v-progress"); v.innerHTML = ""; const d = store.get();
-  v.append(el("h2", "h2", "我的星星"), el("p", "sub", "進度只存在這台裝置上。"));
+  v.append(el("h2", "h2", "我的"), el("p", "sub", "進度只存在這台裝置上。"));
+  v.append(P.dailyCard(false));
   const acc = d.quiz.played ? Math.round(d.quiz.correct / d.quiz.played * 100) : 0;
+  const tacc = d.tone.played ? Math.round(d.tone.correct / d.tone.played * 100) : 0;
+  const passed = LESSON_ORDER.filter(id => store.lessonStars(id) >= 1).length;
   v.append(el("div", "statgrid", `
     <div class="stat"><div class="v">⭐ ${d.stars}</div><div class="k">總星星</div></div>
-    <div class="stat"><div class="v">${store.learnedCount()}<span style="font-size:16px;color:var(--ink-2)"> / 37</span></div><div class="k">學過的符號</div></div>
-    <div class="stat"><div class="v">${acc}%</div><div class="k">聽音答對率（${d.quiz.played} 題）</div></div>
-    <div class="stat"><div class="v">${(d.animals?.correct) || 0}<span style="font-size:16px;color:var(--ink-2)"> / ${(d.animals?.played) || 0}</span></div><div class="k">動物復習答對</div></div>
-    <div class="stat"><div class="v">${d.match.wins}</div><div class="k">翻翻樂完成次數${d.match.bestMoves != null ? `・最佳 ${d.match.bestMoves} 次` : ""}</div></div>`));
+    <div class="stat"><div class="v">${passed}<span class="of"> / 9</span></div><div class="k">課本過關</div></div>
+    <div class="stat"><div class="v">${d.stickers.length}<span class="of"> / ${ANIMALS.length}</span></div><div class="k">收集的貼紙</div></div>
+    <div class="stat"><div class="v">${store.learnedCount()}<span class="of"> / 37</span></div><div class="k">學過的符號</div></div>
+    <div class="stat"><div class="v">${tacc}%</div><div class="k">聲調答對率（${d.tone.played} 題）</div></div>
+    <div class="stat"><div class="v">${d.mole.best}</div><div class="k">打地鼠最高分</div></div>
+    <div class="stat"><div class="v">${acc}%</div><div class="k">聽音答對率</div></div>
+    <div class="stat"><div class="v">${d.write.count || 0}</div><div class="k">寫好的符號</div></div>`));
+  v.append(el("div", "group-title", `貼紙收集冊<span class="n">${d.stickers.length} / ${ANIMALS.length}</span>`));
+  const sb = el("div", "sticker-book");
+  for (const a of ANIMALS) {
+    const has = d.stickers.includes(a.name);
+    const c = el("button", `sticker${has ? " got" : ""}`, `${pic(a.emoji, "pic-md")}<span>${has ? a.name : "？"}</span>`);
+    c.onclick = () => { if (has) sayW(a.name, readingText(a), a.say); else toast("完成任務、過關或全部答對，就能得到貼紙！"); };
+    sb.append(c);
+  }
+  v.append(sb);
   v.append(el("div", "group-title", "學過的符號"));
   const g = el("div", "learned-grid"); for (const s of SYMBOLS) g.append(el("span", d.learned[s.s] ? "y" : "", s.s)); v.append(g);
-  v.append(el("p", "credit", '插圖：<a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a>（CC BY-SA 4.0）・真人發音：中華民國教育部《國語辭典簡編本》錄音（CC BY-ND 3.0 TW，經<a href="https://www.moedict.tw" target="_blank" rel="noopener">萌典</a>取得），僅擷取詞目朗讀段落・合成語音：裝置內建'));
+  v.append(el("div", "group-title", "家長設定"));
+  const ps = el("div", "parent");
+  const lab = el("label", "switch", `<input type="checkbox" ${d.unlockAll ? "checked" : ""}><span>解鎖全部課程（不用依序過關）</span>`);
+  lab.querySelector("input").onchange = e => { store.setUnlockAll(e.target.checked); toast(e.target.checked ? "已解鎖全部課程" : "改回依序過關"); };
+  ps.append(lab); v.append(ps);
+  v.append(el("p", "credit", '插圖：<a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a>（CC BY-SA 4.0）・真人發音：中華民國教育部《國語辭典簡編本》錄音（CC BY-ND 3.0 TW，經<a href="https://www.moedict.tw" target="_blank" rel="noopener">萌典</a>取得），僅擷取詞目朗讀段落・合成語音：裝置內建・跟讀錄音只存在這台裝置的記憶體，不會上傳。'));
   const r = el("button", "btn ghost", "清除所有進度"); r.style.marginTop = "22px";
-  r.onclick = () => { if (confirm("確定要清除所有星星和進度嗎？")) { store.reset(); viewProgress(); viewLearn(); toast("已清除"); } };
+  r.onclick = () => { if (confirm("確定要清除所有星星、貼紙和進度嗎？")) { store.reset(); viewProgress(); toast("已清除"); } };
   v.append(r);
 }
 
 // ================================================================= 路由 / 啟動
-const VIEWS = { learn: viewLearn, book: viewBook, spell: viewSpell, quiz: viewQuiz, match: viewMatch, animals: viewAnimals, progress: viewProgress };
+const P = makePlay({ $, el, shuffle, wait, toast, sayW, saySym, sfx, burst, store, pic, zyHTML, zyLine, go: (...a) => go(...a), voice,
+  SYMBOLS, SYLLABLES, INITIALS, ANIMALS, WORDS, readingText, symbolsUpTo, unlockedUpTo, LESSON_WORDS, LESSON_ORDER, TONE_LESSON });
+const VIEWS = { learn: viewLearn, book: viewBook, spell: viewSpell, quiz: viewQuiz, match: viewMatch, animals: viewAnimals, progress: viewProgress, ...P.views };
+const GAME_VIEWS = new Set(["tone", "mole", "odd", "write", "echo", "quiz", "match", "animals"]);
 function go(name, push = true) {
-  voice.stop(); closeSheet();
+  if (!VIEWS[name]) name = "learn";
+  voice.stop(); closeSheet(); P.stop();
+  if (name === "echo") P.resetEcho();
   document.querySelectorAll(".view").forEach(x => x.classList.toggle("active", x.id === "v-" + name));
-  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.dataset.v === name));
+  const tab = GAME_VIEWS.has(name) ? "games" : name;
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.dataset.v === tab));
+  $("#backbar").hidden = !GAME_VIEWS.has(name);
   if (name === "book" && push) bookAt = null;
   if (an?.custom) an = null;
   VIEWS[name]?.();
   if (push) history.replaceState(null, "", "#" + name);
   scrollTo({ top: 0, behavior: "smooth" });
+}
+let stickerQ = [];
+function showSticker(a) {
+  stickerQ.push(a); if (stickerQ.length > 1) return;
+  const m = $("#modal");
+  const next = () => {
+    const x = stickerQ[0]; if (!x) { m.classList.remove("open"); return; }
+    m.innerHTML = `<div class="modal-card"><div class="ribbon">得到新貼紙！</div><div class="mpic">${pic(x.emoji, "pic-xl")}</div><b>${x.name}</b>${zyHTML(x.syl, "row")}<button class="btn coral">放進收集冊</button></div>`;
+    m.classList.add("open"); sfx.win(); burst({ n: 120 }); sayW(x.name, readingText(x), x.say);
+    m.querySelector("button").onclick = () => { stickerQ.shift(); next(); };
+  };
+  next();
 }
 function inAppBrowser() {
   const ua = navigator.userAgent;
@@ -527,6 +602,9 @@ function boot() {
   paintV();
   const m = $("#mute"); const paint = () => m.textContent = sfx.muted ? "🔇" : "🔊";
   paint(); m.onclick = () => { sfx.toggle(); paint(); toast(sfx.muted ? "音效已關閉（發音仍會播放）" : "音效已開啟"); };
+  $("#backbar button").onclick = () => { sfx.tap(); go("games"); };
+  addEventListener("zp:sticker", e => showSticker(e.detail));
+  addEventListener("zp:daily-done", () => { toast("🎉 今日任務全部完成！"); setTimeout(() => store.awardSticker(), 900); });
   go(location.hash.replace("#", "") in VIEWS ? location.hash.slice(1) : "learn", false);
   if (!tts.supported) toast("這個瀏覽器不支援語音，請改用 Chrome / Safari");
   else setTimeout(() => { if (voice.mode === "tts" && !tts.hasZhVoice) toast("找不到中文語音，請到系統設定安裝「中文（台灣）」語音"); }, 1500);
