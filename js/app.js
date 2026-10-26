@@ -248,7 +248,7 @@ function pickOptions(a) {
 function viewAnimals() {
   const v = $(an?.host || "#v-animals"); v.innerHTML = "";
   if (an?.custom) {
-    const back = el("button", "pill", "← 回課本"); back.onclick = () => { sfx.tap(); an = null; tts.stop(); viewBook(); }; v.append(back);
+    const back = el("button", "pill", "← 回闖關地圖"); back.onclick = () => { sfx.tap(); an = null; tts.stop(); viewBook(); }; v.append(back);
     v.append(el("h2", "h2", an.title), el("p", "sub", an.mode === "pick" ? "看圖，選出正確的注音。" : "用學過的符號，把它拼出來。"));
   } else v.append(el("h2", "h2", "小一動物復習"), el("p", "sub", "課本裡的動物，拼音都記得嗎？"));
   const pills = el("div", "pills");
