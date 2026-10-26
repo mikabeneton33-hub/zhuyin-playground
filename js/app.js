@@ -254,9 +254,9 @@ function viewAnimals() {
   v.append(el("div", "quiz-top", `<span>第 ${an.idx + 1} / ${an.list.length} 題</span><span>答對 ${an.correct}</span>`));
   v.append(el("div", "progressbar", `<i style="width:${an.idx / an.list.length * 100}%"></i>`));
   const hero = el("button", "animal-hero", `<span class="em">${pic(a.emoji, "pic-xl")}</span><span class="nm">${a.name}</span><span class="hint">🔊 點我聽</span>`);
-  hero.onclick = () => say(a.name); v.append(hero);
+  hero.onclick = () => say(a.say); v.append(hero);
   if (an.mode === "pick") animalsPick(v, a); else animalsSpell(v, a);
-  if (an.idx === 0 && !an.spoke) { an.spoke = true; setTimeout(() => say(a.name), 300); }
+  if (an.idx === 0 && !an.spoke) { an.spoke = true; setTimeout(() => say(a.say), 300); }
 }
 function animalsPick(v, a) {
   if (!an.opts) an.opts = pickOptions(a);
@@ -267,9 +267,9 @@ function animalsPick(v, a) {
     b.onclick = async () => {
       if (an.locked) return; an.locked = true; [...wrap.children].forEach(x => x.disabled = true);
       const ok = o.map(sylKey).join(" ") === correctKey;
-      if (ok) { b.classList.add("ok"); sfx.correct(); an.correct++; const r = b.getBoundingClientRect(); burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, n: 50 }); await say(a.name); await wait(300); }
-      else { b.classList.add("bad"); sfx.wrong(); [...wrap.children].find(x => x.dataset.k === correctKey).classList.add("ok"); await say(a.name); await wait(900); }
-      an.idx++; an.opts = null; an.locked = false; say(an.list[an.idx]?.name); viewAnimals();
+      if (ok) { b.classList.add("ok"); sfx.correct(); an.correct++; const r = b.getBoundingClientRect(); burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, n: 50 }); await say(a.say); await wait(300); }
+      else { b.classList.add("bad"); sfx.wrong(); [...wrap.children].find(x => x.dataset.k === correctKey).classList.add("ok"); await say(a.say); await wait(900); }
+      an.idx++; an.opts = null; an.locked = false; say(an.list[an.idx]?.say); viewAnimals();
     };
     b.dataset.k = o.map(sylKey).join(" "); wrap.append(b);
   }
@@ -302,8 +302,8 @@ function animalsSpell(v, a) {
     }
     sfx.correct(); an.miss = 0; an.sylIdx++; an.cur = { i: null, m: null, f: null, t: 1 };
     if (an.sylIdx >= a.syl.length) {
-      an.correct++; burst({ n: 90 }); await say(a.name); await wait(400);
-      an.idx++; an.cur = null; say(an.list[an.idx]?.name);
+      an.correct++; burst({ n: 90 }); await say(a.say); await wait(400);
+      an.idx++; an.cur = null; say(an.list[an.idx]?.say);
     }
     viewAnimals();
   };
