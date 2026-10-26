@@ -289,3 +289,29 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--sky); 
 .word-card:active { transform: scale(.95); }
 .word-card .wn { font-size: 13px; font-weight: 800; color: var(--ink-2); }
 .word-card .nopic { height: 56px; display: grid; place-items: center; font-size: 26px; font-weight: 900; }
+
+/* ---- 發音切換 ---- */
+.topright { gap: 8px; flex-wrap: nowrap; }
+.seg { display: inline-flex; background: var(--card); border-radius: 999px; box-shadow: var(--shadow); padding: 4px; }
+.seg button { padding: 8px 12px; border-radius: 999px; font-weight: 900; font-size: 13px; color: var(--ink-2); transition: all .2s var(--ease); }
+.seg button.on { background: var(--violet); color: #fff; }
+@media (max-width: 480px) {
+  .brand small { display: none; }
+  .brand h1 { font-size: 17px; }
+  .logo { width: 42px; height: 42px; font-size: 20px; }
+  .stars { padding: 8px 10px; }
+  .iconbtn { width: 40px; height: 40px; }
+  .seg button { padding: 7px 9px; }
+}
+.seg button, .brand h1, .stars { white-space: nowrap; }
+.brand { min-width: 0; }
+@media (max-width: 400px) {
+  .topbar { gap: 6px; }
+  .brand { gap: 8px; }
+  .brand h1 { font-size: 16px; }
+  .seg { padding: 3px; }
+  .seg button { padding: 6px 8px; font-size: 12px; }
+  .topright { gap: 6px; }
+  .stars { padding: 7px 9px; gap: 4px; }
+  .iconbtn { width: 38px; height: 38px; font-size: 18px; }
+}

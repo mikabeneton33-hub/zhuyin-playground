@@ -1,5 +1,5 @@
 import { GROUPS, SYMBOLS, TONES, SYLLABLES, INITIALS, MEDIALS, FINALS, bySymbol } from "./data.js";
-import { tts, sfx } from "./audio.js";
+import { tts, sfx, voice } from "./audio.js";
 import { burst } from "./confetti.js";
 import { store } from "./store.js";
 import { ANIMALS, TONE_MARK, sylText, sylKey, readingText } from "./animals.js";
@@ -17,7 +17,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 let toastT;
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800); }
 function say(text) { tts.warmup(); return tts.speak(text); }
-function saySym(s) { tts.warmup(); return tts.speakSymbol(s.s, s.say); }
+function saySym(s) { tts.warmup(); return voice.symbol(s); }
+function sayW(text, zy, ttsText) { tts.warmup(); return voice.word(text, zy, ttsText); }
+const TONE_MARKS = ["", "ˊ", "ˇ", "ˋ"];
 function renderStars() { $("#stars").textContent = store.get().stars; }
 addEventListener("zp:progress", renderStars);
 
@@ -50,12 +52,12 @@ function openSheet(s) {
       <button class="btn ghost" id="sh-word">🗣️ 唸「${s.word}」</button>
     </div>`;
   $("#sh-sym", sh).onclick = () => saySym(s);
-  $("#sh-word", sh).onclick = () => say(s.word);
+  $("#sh-word", sh).onclick = () => sayW(s.word, s.zy);
   sh.classList.add("open"); $("#backdrop").classList.add("open");
   const first = !store.get().learned[s.s];
   store.learn(s.s);
   if (first) { store.addStars(1); toast("⭐ 學到新符號 +1"); }
-  saySym(s).then(() => wait(250)).then(() => say(s.word));
+  saySym(s).then(() => wait(250)).then(() => sayW(s.word, s.zy));
   viewLearn();
 }
 function closeSheet() { $("#sheet").classList.remove("open"); $("#backdrop").classList.remove("open"); tts.stop(); }
@@ -84,7 +86,7 @@ function viewSpell() {
   slots.append(res); stage.append(slots);
   const act = el("div", "row", ""); act.style.marginTop = "16px";
   const speak = el("button", "btn violet", "🔊 唸出來"); speak.disabled = !ch;
-  speak.onclick = () => { res.classList.remove("pop"); void res.offsetWidth; res.classList.add("pop"); say(ch).then(() => { store.spelled(); if (store.get().spell.count % 5 === 0) { store.addStars(1); toast("⭐ 拼了 5 個字 +1"); } }); };
+  speak.onclick = () => { res.classList.remove("pop"); void res.offsetWidth; res.classList.add("pop"); sayW(ch, k + TONE_MARKS[spell.t - 1]).then(() => { store.spelled(); if (store.get().spell.count % 5 === 0) { store.addStars(1); toast("⭐ 拼了 5 個字 +1"); } }); };
   const clear = el("button", "btn ghost", "清除"); clear.style.flex = "0 0 auto";
   clear.onclick = () => { Object.assign(spell, { i: null, m: null, f: null, t: 1 }); sfx.tap(); viewSpell(); };
   act.append(speak, clear); stage.append(act); v.append(stage);
@@ -97,7 +99,7 @@ function viewSpell() {
       const chip = el("button", `chip ${c}${isTone ? " tone-chip" : ""}`, isTone ? `${it.mark || "ˉ"}<small>${it.name}</small>` : it);
       if ((isTone ? spell.t : spell[part]) === val) chip.classList.add("on");
       if (!isTone && spell[part] !== val && !validFor(part, val)) chip.classList.add("dim");
-      chip.onclick = () => { sfx.tap(); if (isTone) spell.t = val; else spell[part] = spell[part] === val ? null : val; viewSpell(); const c2 = spellChar(); if (c2) say(c2); };
+      chip.onclick = () => { sfx.tap(); if (isTone) spell.t = val; else spell[part] = spell[part] === val ? null : val; viewSpell(); const c2 = spellChar(); if (c2) sayW(c2, spellKey() + TONE_MARKS[spell.t - 1]); };
       chips.append(chip);
     }
     w.append(chips); return w;
@@ -121,7 +123,7 @@ function viewQuiz() {
   v.append(el("div", "quiz-top", `<span>第 ${quiz.idx + 1} / ${quiz.qs.length} 題</span><span>答對 ${quiz.correct}</span>`));
   const pb = el("div", "progressbar", `<i style="width:${quiz.idx / quiz.qs.length * 100}%"></i>`); v.append(pb);
   const sp = el("button", "speaker", "🔊"); sp.setAttribute("aria-label", "再聽一次");
-  const play = async () => { sp.classList.add("playing"); await saySym(q.ans); await wait(200); await say(q.ans.word); sp.classList.remove("playing"); };
+  const play = async () => { sp.classList.add("playing"); await saySym(q.ans); await wait(200); await sayW(q.ans.word, q.ans.zy); sp.classList.remove("playing"); };
   sp.onclick = play; v.append(sp, el("div", "speaker-hint", "點喇叭再聽一次"));
   const opts = el("div", "options");
   for (const o of q.opts) {
@@ -136,7 +138,7 @@ function viewQuiz() {
       } else {
         b.classList.add("bad"); sfx.wrong();
         [...opts.children].find(x => x.textContent === q.ans.s).classList.add("ok");
-        await say(`是 ${q.ans.say}，${q.ans.word}`); await wait(500);
+        await saySym(q.ans); await wait(150); await sayW(q.ans.word, q.ans.zy); await wait(500);
       }
       quiz.idx++; quiz.locked = false; viewQuiz();
     };
@@ -180,7 +182,7 @@ function viewMatch() {
     card.onclick = async () => {
       if (match.lock || match.done.has(c.k) || match.open.includes(i)) return;
       sfx.flip(); card.classList.add("flipped"); match.open.push(i);
-      c.type === "sym" ? saySym(c.s) : say(c.s.word);
+      c.type === "sym" ? saySym(c.s) : sayW(c.s.word, c.s.zy);
       if (match.open.length < 2) return;
       match.lock = true; match.moves++;
       const [a, b] = match.open.map(j => match.cards[j]);
@@ -261,9 +263,9 @@ function viewAnimals() {
   v.append(el("div", "quiz-top", `<span>第 ${an.idx + 1} / ${an.list.length} 題</span><span>答對 ${an.correct}</span>`));
   v.append(el("div", "progressbar", `<i style="width:${an.idx / an.list.length * 100}%"></i>`));
   const hero = el("button", "animal-hero", `<span class="em">${a.emoji ? pic(a.emoji, "pic-xl") : ""}</span><span class="nm">${a.name}</span><span class="hint">🔊 點我聽</span>`);
-  hero.onclick = () => say(a.say); v.append(hero);
+  hero.onclick = () => sayW(a.name, readingText(a), a.say); v.append(hero);
   if (an.mode === "pick") animalsPick(v, a); else animalsSpell(v, a);
-  if (an.idx === 0 && !an.spoke) { an.spoke = true; setTimeout(() => say(a.say), 300); }
+  if (an.idx === 0 && !an.spoke) { an.spoke = true; setTimeout(() => sayW(a.name, readingText(a), a.say), 300); }
 }
 function animalsPick(v, a) {
   if (!an.opts) an.opts = pickOptions(a);
@@ -274,9 +276,9 @@ function animalsPick(v, a) {
     b.onclick = async () => {
       if (an.locked) return; an.locked = true; [...wrap.children].forEach(x => x.disabled = true);
       const ok = o.map(sylKey).join(" ") === correctKey;
-      if (ok) { b.classList.add("ok"); sfx.correct(); an.correct++; const r = b.getBoundingClientRect(); burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, n: 50 }); await say(a.say); await wait(300); }
-      else { b.classList.add("bad"); sfx.wrong(); [...wrap.children].find(x => x.dataset.k === correctKey).classList.add("ok"); await say(a.say); await wait(900); }
-      an.idx++; an.opts = null; an.locked = false; say(an.list[an.idx]?.say); viewAnimals();
+      if (ok) { b.classList.add("ok"); sfx.correct(); an.correct++; const r = b.getBoundingClientRect(); burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, n: 50 }); await sayW(a.name, readingText(a), a.say); await wait(300); }
+      else { b.classList.add("bad"); sfx.wrong(); [...wrap.children].find(x => x.dataset.k === correctKey).classList.add("ok"); await sayW(a.name, readingText(a), a.say); await wait(900); }
+      an.idx++; an.opts = null; an.locked = false; (an.list[an.idx] && sayW(an.list[an.idx].name, readingText(an.list[an.idx]), an.list[an.idx].say)); viewAnimals();
     };
     b.dataset.k = o.map(sylKey).join(" "); wrap.append(b);
   }
@@ -309,8 +311,8 @@ function animalsSpell(v, a) {
     }
     sfx.correct(); an.miss = 0; an.sylIdx++; an.cur = { i: null, m: null, f: null, t: 1 };
     if (an.sylIdx >= a.syl.length) {
-      an.correct++; burst({ n: 90 }); await say(a.say); await wait(400);
-      an.idx++; an.cur = null; say(an.list[an.idx]?.say);
+      an.correct++; burst({ n: 90 }); await sayW(a.name, readingText(a), a.say); await wait(400);
+      an.idx++; an.cur = null; (an.list[an.idx] && sayW(an.list[an.idx].name, readingText(an.list[an.idx]), an.list[an.idx].say));
     }
     viewAnimals();
   };
@@ -390,7 +392,7 @@ function viewBook() {
       const tag = it.no ? `<span class="no">第${it.no}課</span>` : `<span class="no ic">${it.kind === "tones" ? "🎵" : it.kind === "review" ? "⭐" : "🏠"}</span>`;
       const news = it.kind === "lesson" ? `<span class="news">${[...LESSON_SYMBOLS[it.id].i, ...LESSON_SYMBOLS[it.id].f].join(" ")}</span>` : "";
       c.innerHTML = `${tag}<span class="ttl">${zyHTML(zyLine(it.zy), "row")}${news}</span><span class="pg">p.${it.page}</span>`;
-      c.onclick = () => { sfx.tap(); if (it.kind === "link") return go(it.to); bookAt = it.id; viewBook(); scrollTo({ top: 0 }); say(it.say); };
+      c.onclick = () => { sfx.tap(); if (it.kind === "link") return go(it.to); bookAt = it.id; viewBook(); scrollTo({ top: 0 }); sayW(it.say, it.zy); };
       list.append(c);
     }
     v.append(list);
@@ -403,7 +405,7 @@ function symTiles(title, list, cls) {
   const row = el("div", "chips");
   for (const s of list) {
     const c = el("button", `chip ${cls}`, s);
-    c.onclick = () => { sfx.tap(); const o = bySymbol[s]; o ? saySym(o) : say(SYLLABLES[s]?.find(Boolean) || s); };
+    c.onclick = () => { sfx.tap(); const o = bySymbol[s]; if (o) return saySym(o); const arr = SYLLABLES[s] || []; const t = arr.findIndex(Boolean); if (t >= 0) sayW(arr[t], s + TONE_MARKS[t]); };
     row.append(c);
   }
   w.append(row); return w;
@@ -418,7 +420,7 @@ function wordGrid(words) {
   const g = el("div", "word-grid");
   for (const w of words) {
     const c = el("button", "word-card", `${w.emoji ? pic(w.emoji, "pic-md") : `<span class="nopic">${w.name}</span>`}${zyHTML(w.syl, "tiny")}<span class="wn">${w.name}</span>`);
-    c.onclick = () => { sfx.tap(); say(w.say); };
+    c.onclick = () => { sfx.tap(); sayW(w.name, readingText(w), w.say); };
     g.append(c);
   }
   return g;
@@ -429,7 +431,7 @@ function bookDetail(v, it) {
   const head = el("div", "lesson-head");
   head.innerHTML = `<div class="kicker">${it.no ? `第${it.no}課` : "複習"}・課本 p.${it.page}</div>`;
   const title = el("button", "lesson-title", zyHTML(zyLine(it.zy), "big"));
-  title.onclick = () => say(it.say); head.append(title, el("div", "hint-s", "點標題聽一次"));
+  title.onclick = () => sayW(it.say, it.zy); head.append(title, el("div", "hint-s", "點標題聽一次"));
   v.append(head);
   const ids = it.kind === "review" ? it.lessons : [it.id];
   const words = ids.flatMap(id => LESSON_WORDS[id]);
@@ -444,7 +446,7 @@ function bookDetail(v, it) {
   } else {
     v.append(el("div", "group-title", "複習範圍"));
     const list = el("div", "book-list");
-    for (const l of ids.map(findItem)) { const c = el("button", "book-item lesson", `<span class="no">第${l.no}課</span><span class="ttl">${zyHTML(zyLine(l.zy), "row")}</span>`); c.onclick = () => { bookAt = l.id; viewBook(); say(l.say); }; list.append(c); }
+    for (const l of ids.map(findItem)) { const c = el("button", "book-item lesson", `<span class="no">第${l.no}課</span><span class="ttl">${zyHTML(zyLine(l.zy), "row")}</span>`); c.onclick = () => { bookAt = l.id; viewBook(); sayW(l.say, l.zy); }; list.append(c); }
     v.append(list);
   }
   v.append(el("div", "group-title", `練習詞<span class="n">${words.length} 個・只用學過的符號</span>`));
@@ -463,12 +465,12 @@ function bookTones(v) {
       <svg class="tc-curve" viewBox="0 0 100 100" aria-hidden="true"><path d="${t.path}"/></svg>
       <div class="tc-shape">聲調${t.shape}</div><div class="tc-move">${t.move}</div>
       <div class="tc-ex">${zyHTML([parseZy(t.ex)], "tiny")}</div>`;
-    c.onclick = () => { sfx.tap(); c.classList.remove("go"); void c.offsetWidth; c.classList.add("go"); say(t.say); };
+    c.onclick = () => { sfx.tap(); c.classList.remove("go"); void c.offsetWidth; c.classList.add("go"); sayW(t.say, t.n === 5 ? "ㄇㄚ ˙ㄇㄚ" : t.ex); };
     g.append(c);
   }
   v.append(g);
   const all = el("button", "btn violet", "▶ 一到四聲連著唸"); all.style.marginTop = "14px";
-  all.onclick = async () => { for (const [i, t] of TONE_LESSON.slice(0, 4).entries()) { const c = g.children[i]; c.classList.add("go"); await say(t.say); c.classList.remove("go"); await wait(250); } };
+  all.onclick = async () => { for (const [i, t] of TONE_LESSON.slice(0, 4).entries()) { const c = g.children[i]; c.classList.add("go"); await sayW(t.say, t.ex); c.classList.remove("go"); await wait(250); } };
   v.append(all);
 }
 
@@ -485,7 +487,7 @@ function viewProgress() {
     <div class="stat"><div class="v">${d.match.wins}</div><div class="k">翻翻樂完成次數${d.match.bestMoves != null ? `・最佳 ${d.match.bestMoves} 次` : ""}</div></div>`));
   v.append(el("div", "group-title", "學過的符號"));
   const g = el("div", "learned-grid"); for (const s of SYMBOLS) g.append(el("span", d.learned[s.s] ? "y" : "", s.s)); v.append(g);
-  v.append(el("p", "credit", '插圖：<a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a>（CC BY-SA 4.0）・發音：裝置內建語音'));
+  v.append(el("p", "credit", '插圖：<a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a>（CC BY-SA 4.0）・真人發音：中華民國教育部《國語辭典簡編本》錄音（CC BY-ND 3.0 TW，經<a href="https://www.moedict.tw" target="_blank" rel="noopener">萌典</a>取得），僅擷取詞目朗讀段落・合成語音：裝置內建'));
   const r = el("button", "btn ghost", "清除所有進度"); r.style.marginTop = "22px";
   r.onclick = () => { if (confirm("確定要清除所有星星和進度嗎？")) { store.reset(); viewProgress(); viewLearn(); toast("已清除"); } };
   v.append(r);
@@ -494,7 +496,7 @@ function viewProgress() {
 // ================================================================= 路由 / 啟動
 const VIEWS = { learn: viewLearn, book: viewBook, spell: viewSpell, quiz: viewQuiz, match: viewMatch, animals: viewAnimals, progress: viewProgress };
 function go(name, push = true) {
-  tts.stop(); closeSheet();
+  voice.stop(); closeSheet();
   document.querySelectorAll(".view").forEach(x => x.classList.toggle("active", x.id === "v-" + name));
   document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.dataset.v === name));
   if (name === "book" && push) bookAt = null;
@@ -519,11 +521,15 @@ function boot() {
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => { sfx.tap(); go(t.dataset.v); });
   $("#backdrop").onclick = closeSheet;
   $("#starsbtn").onclick = () => { sfx.tap(); go("progress"); };
+  const vt = $("#voicetoggle");
+  const paintV = () => vt.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.mode === voice.mode));
+  vt.querySelectorAll("button").forEach(b => b.onclick = () => { voice.mode = b.dataset.mode; paintV(); sfx.tap(); toast(voice.mode === "human" ? "真人發音：教育部辭典錄音" : "合成語音：裝置內建"); sayW("媽媽", "ㄇㄚ ˙ㄇㄚ"); });
+  paintV();
   const m = $("#mute"); const paint = () => m.textContent = sfx.muted ? "🔇" : "🔊";
   paint(); m.onclick = () => { sfx.toggle(); paint(); toast(sfx.muted ? "音效已關閉（發音仍會播放）" : "音效已開啟"); };
   go(location.hash.replace("#", "") in VIEWS ? location.hash.slice(1) : "learn", false);
   if (!tts.supported) toast("這個瀏覽器不支援語音，請改用 Chrome / Safari");
-  else setTimeout(() => { if (!tts.hasZhVoice) toast("找不到中文語音，請到系統設定安裝「中文（台灣）」語音"); }, 1500);
+  else setTimeout(() => { if (voice.mode === "tts" && !tts.hasZhVoice) toast("找不到中文語音，請到系統設定安裝「中文（台灣）」語音"); }, 1500);
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 boot();

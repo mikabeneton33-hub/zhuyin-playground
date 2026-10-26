@@ -1,4 +1,8 @@
-// 發音：瀏覽器內建 zh-TW 語音合成（免費、免檔案）。音效：WebAudio 合成（免檔案）。
+// 發音有兩種模式（右上角切換）：
+//  human = 教育部辭典真人錄音（audio/moe），沒有錄音的字詞自動改用合成語音
+//  tts   = 瀏覽器內建 zh-TW 語音合成
+// 音效：WebAudio 合成（免檔案）。
+import { MOE } from "./voice_map.js";
 const synth = globalThis.speechSynthesis;
 let voices = [];
 let ready = false;
@@ -100,4 +104,56 @@ export const sfx = {
   wrong()   { if (!muted) { tone(220, 0, 0.18, "sawtooth", 0.08); tone(180, 0.15, 0.22, "sawtooth", 0.08); } },
   win()     { if (!muted) [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.18)); },
   flip()    { if (!muted) tone(660, 0, 0.06, "square", 0.04); },
+};
+
+// ---- 真人發音（教育部辭典錄音） ----
+const normZy = z => (z || "").trim().split(/\s+/).filter(Boolean).map(x => x.endsWith("˙") ? "˙" + x.slice(0, -1) : x).join(" ");
+let mode = "human";
+try { mode = localStorage.getItem("zp.voice") || "human"; } catch {}
+let current = null;
+function playFile(id) {
+  return new Promise(resolve => {
+    stopFile();
+    const a = new Audio(`audio/moe/${id}.mp3`);
+    current = a;
+    let done = false; const fin = ok => { if (!done) { done = true; resolve(ok); } };
+    a.onended = () => fin(true); a.onerror = () => fin(false);
+    setTimeout(() => fin(true), 4000);
+    a.play().catch(() => fin(false));
+  });
+}
+function stopFile() { if (current) { try { current.pause(); } catch {} current = null; } }
+/** 找錄音：整個字詞 → 逐字（不含輕聲時） */
+function findIds(text, zy) {
+  const z = normZy(zy);
+  if (!text || !z) return null;
+  const whole = MOE[text + "|" + z];
+  if (whole) return [whole];
+  const cs = [...text], ss = z.split(" ");
+  if (cs.length > 1 && cs.length === ss.length && !ss.some(x => x.startsWith("˙"))) {
+    const ids = cs.map((c, i) => MOE[c + "|" + ss[i]]);
+    if (ids.every(Boolean)) return ids;
+  }
+  return null;
+}
+export const voice = {
+  get mode() { return mode; },
+  set mode(v) { mode = v; try { localStorage.setItem("zp.voice", v); } catch {} },
+  hasHuman(text, zy) { return !!findIds(text, zy); },
+  /** 唸字詞：text 國字、zy 注音、ttsText 給合成語音用的字（可省略）。 */
+  async word(text, zy, ttsText) {
+    tts.stop(); stopFile();
+    if (mode === "human") {
+      const ids = findIds(text, zy);
+      if (ids) { for (const id of ids) { const ok = await playFile(id); if (!ok) break; } return true; }
+    }
+    return tts.speak(ttsText || text);
+  },
+  /** 唸注音符號：真人模式唸呼讀音字的錄音（ㄅ→玻）。 */
+  symbol(s) {
+    tts.stop(); stopFile();
+    if (mode === "human") { const id = MOE[s.say + "|*"]; if (id) return playFile(id); }
+    return tts.speakSymbol(s.s, s.say);
+  },
+  stop() { stopFile(); tts.stop(); },
 };

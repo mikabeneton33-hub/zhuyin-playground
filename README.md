@@ -17,8 +17,9 @@
 ## 技術
 
 - 單純 HTML / CSS / JavaScript（ES modules），沒有框架、沒有建置步驟。
-- 發音用瀏覽器內建的 `speechSynthesis`（zh-TW）。免費，但音質依裝置而異；裝置沒有中文語音時會提示到系統設定安裝。
-- 單一符號先讓引擎唸符號本身，引擎跳過沒出聲時退回呼讀音字（ㄅ→玻、ㄈ→佛）。語音引擎無法發出孤立子音，所以聲母一定帶一個母音。
+- 發音有兩種模式，右上角「真人／合成」切換：
+  - **真人**（預設）：教育部《國語辭典簡編本》的真人錄音，經萌典取得，CC BY-ND 3.0 TW。只收錄讀音與本站注音完全一致的錄音，並只擷取開頭朗讀詞目的段落，不更動內容。約 97% 的字詞有錄音，其餘自動改用合成語音。
+  - **合成**：瀏覽器內建 `speechSynthesis`（zh-TW）。
 - 音效用 WebAudio 即時合成。插圖採用 [OpenMoji](https://openmoji.org)（CC BY-SA 4.0）的 SVG，隨 repo 自帶，所有裝置風格一致，可離線。
 - PWA：含 manifest 和 service worker，可「加到主畫面」並離線使用。
 - 支援 `prefers-reduced-motion`，所有可點元素最小 44px，鍵盤可操作。
@@ -40,4 +41,4 @@ python3 -m http.server 8000
 
 ## 授權
 
-程式碼 MIT。插圖 OpenMoji，CC BY-SA 4.0，© OpenMoji 貢獻者。
+程式碼 MIT。插圖 OpenMoji，CC BY-SA 4.0，© OpenMoji 貢獻者。真人發音錄音 © 中華民國教育部《國語辭典簡編本》，CC BY-ND 3.0 TW。
