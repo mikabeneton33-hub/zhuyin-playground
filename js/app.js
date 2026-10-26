@@ -3,6 +3,7 @@ import { tts, sfx } from "./audio.js";
 import { burst } from "./confetti.js";
 import { store } from "./store.js";
 import { ANIMALS, TONE_MARK, sylText, sylKey, readingText } from "./animals.js";
+import { BOOK, UNITS, TONE_LESSON, findItem } from "./textbook.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -331,6 +332,91 @@ function animalsSummary(v) {
   const b = el("button", "btn coral", "再來一輪"); b.onclick = () => { sfx.tap(); newAnimals(an.mode); viewAnimals(); }; s.append(b); v.append(s);
 }
 
+
+// ================================================================= 課本（南一首冊）
+function parseZy(z) { // "˙ㄇㄚ" / "ㄊㄚˊ" -> {i,m,f,t}
+  let t = 1;
+  if (z.startsWith("˙")) { t = 5; z = z.slice(1); }
+  const last = z.slice(-1), tm = { "ˊ": 2, "ˇ": 3, "ˋ": 4 };
+  if (tm[last]) { t = tm[last]; z = z.slice(0, -1); }
+  const o = { i: "", m: "", f: "", t };
+  for (const ch of z) { if (INITIALS.includes(ch)) o.i = ch; else if (MEDIALS.includes(ch)) o.m = ch; else if (FINALS.includes(ch)) o.f = ch; }
+  return o;
+}
+const zyLine = z => z.trim().split(/\s+/).filter(Boolean).map(parseZy);
+let bookAt = null; // null = 目錄；否則 item id
+function viewBook() {
+  const v = $("#v-book"); v.innerHTML = "";
+  if (bookAt) return bookDetail(v, findItem(bookAt));
+  v.append(el("h2", "h2", "課本"), el("p", "sub", `${BOOK.name}・${BOOK.grade}`));
+  for (const u of UNITS) {
+    const t = el("div", "group-title", `<span class="bar" style="background:var(--violet)"></span>${u.title}`);
+    if (u.zy) t.insertAdjacentHTML("beforeend", `<span class="unit-zy">${zyHTML(zyLine(u.zy), "tiny")}</span>`);
+    v.append(t);
+    const list = el("div", "book-list");
+    for (const it of u.items) {
+      const c = el("button", `book-item ${it.kind}${it.todo ? " todo" : ""}`);
+      const tag = it.no ? `<span class="no">第${it.no}課</span>` : `<span class="no ic">${it.kind === "tones" ? "🎵" : it.kind === "review" ? "⭐" : "🏠"}</span>`;
+      c.innerHTML = `${tag}<span class="ttl">${it.zy ? zyHTML(zyLine(it.zy), "row") : `<span class="pending">課名待補</span>`}</span><span class="pg">p.${it.page}</span>`;
+      c.onclick = () => { sfx.tap(); if (it.kind === "link") return go(it.to); bookAt = it.id; viewBook(); scrollTo({ top: 0 }); if (it.say) say(it.say); };
+      list.append(c);
+    }
+    v.append(list);
+  }
+  v.append(el("p", "credit", "課名與練習依南一版國語首冊整理，僅收錄注音練習所需的短句。"));
+}
+function backBtn(v) { const b = el("button", "pill", "← 回目錄"); b.onclick = () => { sfx.tap(); bookAt = null; tts.stop(); viewBook(); }; v.append(b); }
+function bookDetail(v, it) {
+  backBtn(v);
+  if (it.kind === "tones") return bookTones(v);
+  const head = el("div", "lesson-head");
+  head.innerHTML = `<div class="kicker">${it.no ? `第${it.no}課` : it.kind === "review" ? "複習" : ""}・課本 p.${it.page}</div>`;
+  if (it.zy) {
+    const title = el("button", "lesson-title", zyHTML(zyLine(it.zy), "big"));
+    title.onclick = () => say(it.say); head.append(title, el("div", "hint-s", "點標題聽一次"));
+  } else head.append(el("div", "empty-hint", "這一課的課名照片看不清楚，請拍課本這一頁給我補上。"));
+  v.append(head);
+  if (it.kind === "review") return bookReview(v, it);
+  const lines = it.lines || [];
+  if (!lines.length) { v.append(el("div", "empty-hint", "這一課的練習句還沒加入。拍課本這一課的內容頁給我，就能做成跟讀和拼音練習。")); return; }
+  v.append(el("div", "group-title", "跟著唸"));
+  const wrap = el("div", "lines");
+  lines.forEach((ln, i) => {
+    const row = el("button", "line", `<span class="ln">${i + 1}</span>${zyHTML(zyLine(ln.zy), "row")}<span class="play">🔊</span>`);
+    row.onclick = async () => { sfx.tap(); row.classList.add("playing"); await say(ln.say); row.classList.remove("playing"); };
+    wrap.append(row);
+  });
+  v.append(wrap);
+  const all = el("button", "btn violet", "▶ 全部唸一次"); all.style.marginTop = "14px";
+  all.onclick = async () => { for (const [i, ln] of lines.entries()) { const r = wrap.children[i]; r.classList.add("playing"); await say(ln.say); r.classList.remove("playing"); await wait(350); } };
+  v.append(all);
+}
+function bookTones(v) {
+  v.append(el("h2", "h2", "聲調教學"), el("p", "sub", "跟著動作一起唸：ㄇㄚ、ㄇㄚˊ、ㄇㄚˇ、ㄇㄚˋ、˙ㄇㄚ"));
+  const g = el("div", "tone-grid");
+  for (const t of TONE_LESSON) {
+    const c = el("button", `tone-card t${t.n}`);
+    c.innerHTML = `<div class="tc-top"><span class="tc-mark">${t.mark}</span><span class="tc-name">${t.name}</span></div>
+      <svg class="tc-curve" viewBox="0 0 100 100" aria-hidden="true"><path d="${t.path}"/></svg>
+      <div class="tc-shape">聲調${t.shape}</div><div class="tc-move">${t.move}</div>
+      <div class="tc-ex">${zyHTML([parseZy(t.ex)], "tiny")}</div>`;
+    c.onclick = () => { sfx.tap(); c.classList.remove("go"); void c.offsetWidth; c.classList.add("go"); say(t.say); };
+    g.append(c);
+  }
+  v.append(g);
+  const all = el("button", "btn violet", "▶ 一到四聲連著唸"); all.style.marginTop = "14px";
+  all.onclick = async () => { for (const [i, t] of TONE_LESSON.slice(0, 4).entries()) { const c = g.children[i]; c.classList.add("go"); await say(t.say); c.classList.remove("go"); await wait(250); } };
+  v.append(all);
+}
+function bookReview(v, it) {
+  const ls = it.lessons.map(findItem).filter(x => x?.zy);
+  v.append(el("div", "group-title", "這個單元的課"));
+  const list = el("div", "book-list");
+  for (const l of ls) { const c = el("button", "book-item lesson", `<span class="no">第${l.no}課</span><span class="ttl">${zyHTML(zyLine(l.zy), "row")}</span>`); c.onclick = () => { bookAt = l.id; viewBook(); say(l.say); }; list.append(c); }
+  v.append(list);
+  const q = el("button", "btn coral", "👂 去聽聽看測驗"); q.style.marginTop = "14px"; q.onclick = () => go("quiz"); v.append(q);
+}
+
 // ================================================================= 我的進度
 function viewProgress() {
   const v = $("#v-progress"); v.innerHTML = ""; const d = store.get();
@@ -351,11 +437,12 @@ function viewProgress() {
 }
 
 // ================================================================= 路由 / 啟動
-const VIEWS = { learn: viewLearn, spell: viewSpell, quiz: viewQuiz, match: viewMatch, animals: viewAnimals, progress: viewProgress };
+const VIEWS = { learn: viewLearn, book: viewBook, spell: viewSpell, quiz: viewQuiz, match: viewMatch, animals: viewAnimals, progress: viewProgress };
 function go(name, push = true) {
   tts.stop(); closeSheet();
   document.querySelectorAll(".view").forEach(x => x.classList.toggle("active", x.id === "v-" + name));
   document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.dataset.v === name));
+  if (name === "book" && push) bookAt = null;
   VIEWS[name]?.();
   if (push) history.replaceState(null, "", "#" + name);
   scrollTo({ top: 0, behavior: "smooth" });
@@ -375,6 +462,7 @@ function boot() {
   showBrowserBanner();
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => { sfx.tap(); go(t.dataset.v); });
   $("#backdrop").onclick = closeSheet;
+  $("#starsbtn").onclick = () => { sfx.tap(); go("progress"); };
   const m = $("#mute"); const paint = () => m.textContent = sfx.muted ? "🔇" : "🔊";
   paint(); m.onclick = () => { sfx.toggle(); paint(); toast(sfx.muted ? "音效已關閉（發音仍會播放）" : "音效已開啟"); };
   go(location.hash.replace("#", "") in VIEWS ? location.hash.slice(1) : "learn", false);
