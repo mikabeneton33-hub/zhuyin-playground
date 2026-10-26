@@ -113,12 +113,24 @@ export function makePlay(ctx) {
 
   // ============================================================ 注音打地鼠
   let ml = null; let moleRange = null;
+  // 速度：倍率越大越慢。預設「一般」= 原本速度。
+  const MOLE_SPEEDS = [{ id: "slow", name: "🐢 慢", k: 1.7 }, { id: "normal", name: "🐰 一般", k: 1 }, { id: "fast", name: "🚀 快", k: 0.7 }];
+  let moleSpeed = "normal";
+  try { moleSpeed = localStorage.getItem("zp.moleSpeed") || "normal"; } catch {}
+  const speedK = () => (MOLE_SPEEDS.find(x => x.id === moleSpeed) || MOLE_SPEEDS[1]).k;
   function viewMole() {
     const v = $("#v-mole"); v.innerHTML = "";
     if (moleRange == null) moleRange = unlockedUpTo();
     v.append(el("h2", "h2", "注音打地鼠"), el("p", "sub", "聽到哪個音，就快打那隻地鼠！"));
     if (!ml || !ml.running) {
       v.append(rangePicker(moleRange, n => { moleRange = n; viewMole(); }));
+      const sp = el("div", "pills speed"); sp.append(el("span", "range-lbl", "速度"));
+      for (const o of MOLE_SPEEDS) {
+        const b = el("button", `pill coral${o.id === moleSpeed ? " on" : ""}`, o.name);
+        b.onclick = () => { sfx.tap(); moleSpeed = o.id; try { localStorage.setItem("zp.moleSpeed", o.id); } catch {} viewMole(); };
+        sp.append(b);
+      }
+      v.append(sp);
       const syms = symbolsUpTo(moleRange);
       v.append(el("div", "mole-intro", `<div class="big-emoji">🐹</div><p>這一場會出現 <b>${syms.length}</b> 個符號：</p><div class="mini-syms">${syms.map(s => `<span>${s}</span>`).join("")}</div><p class="best">最高分 ${store.get().mole.best}</p>`));
       if (ml?.over) v.append(el("div", "summary mini", `<h3>${ml.score} 分</h3><p>打中 ${ml.hits} 隻・最高連擊 ${ml.maxCombo}${ml.newBest ? "・新紀錄！" : ""}</p>`));
@@ -151,7 +163,7 @@ export function makePlay(ctx) {
     function paint() { sc.textContent = `${ml.score} 分`; cb.textContent = ml.combo >= 2 ? `🔥 ${ml.combo} 連擊` : ""; }
     function show(i, s) {
       ml.holes[i] = s; const h = holes[i]; h.querySelector("b").textContent = s; h.classList.remove("bonk", "miss"); h.classList.add("up");
-      const life = Math.max(900, 1700 - ml.hits * 25);
+      const life = Math.max(900, 1700 - ml.hits * 25) * speedK();
       later(() => { if (ml.holes[i] === s) { ml.holes[i] = null; h.classList.remove("up"); } }, life);
     }
     function spawn() {
@@ -163,7 +175,7 @@ export function makePlay(ctx) {
         const s = (!hasTarget && Math.random() < 0.55) ? ml.target : syms.filter(x => x !== ml.target)[Math.random() * Math.max(1, syms.length - 1) | 0] || ml.target;
         show(i, s);
       }
-      later(spawn, Math.max(420, 760 - ml.hits * 12));
+      later(spawn, Math.max(420, 760 - ml.hits * 12) * speedK());
     }
     function hit(i) {
       const s = ml.holes[i]; if (!s || !ml.running) return;
