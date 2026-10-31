@@ -1,6 +1,6 @@
 // 遊戲樂園：聲調耳朵、注音打地鼠、找不同、寫寫看、我也會唸，以及每日任務卡。
 // 由 app.js 呼叫 makePlay(ctx) 注入共用工具，避免循環 import。
-import { TASK_POOL } from "./store.js";
+import { dailyCard } from "../../core/daily.js";
 
 export function makePlay(ctx) {
   const { $, el, shuffle, wait, toast, sayW, saySym, sfx, burst, store, pic, zyHTML, zyLine, go, voice,
@@ -34,20 +34,6 @@ export function makePlay(ctx) {
     { v: "match", icon: "🃏", name: "翻翻樂", desc: "符號和圖片配成一對", color: "coral" },
     { v: "animals", icon: "🦁", name: "動物復習", desc: "94 種動物的注音", color: "mint" },
   ];
-  function dailyCard(compact) {
-    const d = store.daily(); const s = store.get().streak;
-    const card = el("div", `daily${d.rewarded ? " done" : ""}`);
-    card.append(el("div", "daily-head", `<b>今日任務</b><span class="streak">🔥 連續 ${s.last ? s.count : 0} 天</span>`));
-    for (const t of d.tasks) {
-      const meta = TASK_POOL.find(x => x.id === t.id);
-      const row = el("button", `task${t.n >= t.goal ? " ok" : ""}`, `<span class="ti">${t.n >= t.goal ? "✅" : meta.icon}</span><span class="tl">${meta.label}</span><span class="tp">${t.n}/${t.goal}</span><i style="width:${t.n / t.goal * 100}%"></i>`);
-      row.onclick = () => { sfx.tap(); go(meta.go); };
-      card.append(row);
-    }
-    if (d.rewarded) card.append(el("div", "daily-ok", "今天的任務都完成了！明天再來挑戰 🎉"));
-    else if (!compact) card.append(el("div", "daily-tip", "三個都完成可以得到一張動物貼紙"));
-    return card;
-  }
   function viewGames() {
     const v = $("#v-games"); v.innerHTML = "";
     v.append(el("h2", "h2", "遊戲樂園"), el("p", "sub", "選一個想玩的！"));

@@ -1,7 +1,7 @@
 {
-  "name": "ㄅㄆㄇ 注音樂園",
-  "short_name": "注音樂園",
-  "description": "給小朋友的注音符號學習網站",
+  "name": "小一學習樂園",
+  "short_name": "學習樂園",
+  "description": "給國小一年級的學習網站：國語注音、數學",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>ㄅㄆㄇ 注音樂園</title>
-<meta name="description" content="給小朋友的注音符號學習網站：37 個注音、拼音練習、聽音辨認、配對遊戲。免安裝、免登入。">
+<title>小一學習樂園</title>
+<meta name="description" content="給國小一年級的學習網站：國語注音、數學。闖關、遊戲、每日任務，免安裝、免登入、可離線。">
 <meta name="theme-color" content="#FFF8EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="注音樂園">
+<meta name="apple-mobile-web-app-title" content="學習樂園">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -22,7 +22,7 @@
   <header class="topbar">
     <div class="brand">
       <div class="logo" aria-hidden="true">ㄅ</div>
-      <h1>注音樂園<small>ZHUYIN PLAYGROUND</small></h1>
+      <h1>學習樂園<small>PLAYGROUND</small></h1>
     </div>
     <div class="row topright">
       <div class="seg" id="voicetoggle" role="group" aria-label="發音來源">
@@ -33,32 +33,14 @@
       <button class="iconbtn" id="mute" aria-label="音效開關">🔊</button>
     </div>
   </header>
+  <nav class="subjects" id="subjectseg" aria-label="科目"></nav>
 
   <main>
     <div id="backbar" class="backbar" hidden><button class="pill">← 遊戲樂園</button></div>
-    <section id="v-learn" class="view" aria-labelledby="learn"></section>
-    <section id="v-book" class="view"></section>
-    <section id="v-spell" class="view"></section>
-    <section id="v-quiz" class="view"></section>
-    <section id="v-match" class="view"></section>
-    <section id="v-animals" class="view"></section>
-    <section id="v-progress" class="view"></section>
-    <section id="v-games" class="view"></section>
-    <section id="v-tone" class="view"></section>
-    <section id="v-mole" class="view"></section>
-    <section id="v-odd" class="view"></section>
-    <section id="v-write" class="view"></section>
-    <section id="v-echo" class="view"></section>
   </main>
 </div>
 
-<nav class="tabbar" aria-label="主選單">
-  <button class="tab" data-v="learn"><span class="ic">🔤</span>注音表</button>
-  <button class="tab" data-v="book"><span class="ic">🗺️</span>闖關</button>
-  <button class="tab" data-v="spell"><span class="ic">🧩</span>拼拼看</button>
-  <button class="tab" data-v="games"><span class="ic">🎮</span>遊戲</button>
-  <button class="tab" data-v="progress"><span class="ic">🏅</span>我的</button>
-</nav>
+<nav class="tabbar" aria-label="主選單"></nav>
 
 <div id="backdrop" class="backdrop"></div>
 <div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="符號說明"></div>
