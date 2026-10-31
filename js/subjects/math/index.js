@@ -275,6 +275,14 @@ const GEN = {
     return { html: `<div class="m-q">${sq.name}：${q}</div>`, speak: `${sq.name}，${q}`, ans, opts: order.map(card), wide: true, cls: n === 3 ? "three" : "",
       after: sq.steps.map(x => x[1]).join(" → ") };
   },
+  seqorder() { // 時間的先後：依序點卡片排出整串順序
+    const sq = pick(SEQS), n = sq.steps.length, order = shuffle(sq.steps.map((_, i) => i));
+    const slots = `<div class="m-slots">${sq.steps.map(() => "<span>?</span>").join("")}</div>`;
+    return { mode: "order", html: `<div class="m-q">${sq.name}：先發生的先點，依順序點一點</div>${slots}`, speak: `${sq.name}，先發生的先點，依順序點一點。`,
+      ans: sq.steps.map((_, i) => i), opts: order.map((i, j) => ({ val: i, say: sq.steps[i][1], slot: pic(sq.steps[i][0], "pic-md"),
+        html: `<span class="m-ev"><i>${"ㄅㄆㄇㄈ"[j]}</i>${pic(sq.steps[i][0], "pic-lg")}<b>${sq.steps[i][1]}</b></span>` })),
+      wide: true, cls: n === 3 ? "three" : "", after: sq.steps.map(x => x[1]).join(" → ") };
+  },
   duration() { // 時間的長短
     const [a, b] = pick(DURS), long = Math.random() < 0.5, ans = long ? 1 : 0;
     const card = (x, i) => ({ val: i, html: `<span class="m-ev">${pic(x[0], "pic-lg")}<b>${x[1]}</b></span>` });
@@ -312,7 +320,7 @@ const TYPES = [
   { type: "add", icon: "➕", name: "加法", desc: "合起來是多少", color: "mint", ranged: true },
   { type: "sub", icon: "➖", name: "減法", desc: "拿走後剩多少", color: "violet", ranged: true },
   { type: "diff", icon: "🐾", name: "多多少、少多少", desc: "兩排比一比", color: "sky", ranged: true },
-  { type: "sequence", icon: "🐣", name: "先後和長短", desc: "誰先誰後、哪個比較久", color: "sunny", drills: [{ type: "sequence" }, { type: "duration" }] },
+  { type: "sequence", icon: "🐣", name: "先後和長短", desc: "誰先誰後、哪個比較久", color: "sunny", drills: [{ type: "seqorder" }, { type: "sequence" }, { type: "duration" }] },
   { type: "clock", icon: "🕒", name: "幾點鐘", desc: "幾點、幾點半", color: "coral", drills: [{ type: "clock", half: true }] },
 ];
 
@@ -348,29 +356,57 @@ function renderRound() {
   const tools = el("div", "row m-tools"); const sp = el("button", "pill", "🔊 再聽一次"); sp.onclick = () => { sfx.tap(); speakQ(q); }; tools.append(sp);
   v.append(card, tools);
   const opts = el("div", `options m-opts${q.wide ? " wide" : ""}${q.stack ? " stack" : ""} ${q.cls || ""}`);
-  for (const o of q.opts) {
+  const finish = async ok => {
+    if (ok) round.correct++;
+    card.querySelectorAll(".hole").forEach(h => { h.textContent = q.ans; h.classList.add("filled"); });
+    if (q.after) { card.append(el("div", "m-after", q.after)); await wait(300); await say(speakable(q.after)); }
+    else if (typeof q.ans === "number" && !q.wide) await sayNum(q.ans);
+    await wait(ok ? 500 : 900);
+    round.idx++; round.locked = false; renderRound();
+  };
+  if (q.mode === "order") orderOptions(q, card, opts, finish);
+  else for (const o of q.opts) {
     const b = el("button", "opt", o.html);
-    b.onclick = async () => {
+    b.onclick = () => {
       if (round.locked) return; round.locked = true;
       [...opts.children].forEach(x => x.disabled = true);
       const ok = o.val === q.ans;
       if (ok) {
-        b.classList.add("ok"); sfx.correct(); round.correct++;
+        b.classList.add("ok"); sfx.correct();
         const r = b.getBoundingClientRect(); burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, n: 50 });
       } else {
         b.classList.add("bad"); sfx.wrong();
         q.opts.forEach((x, i) => { if (x.val === q.ans) opts.children[i].classList.add("ok"); });
       }
-      card.querySelectorAll(".hole").forEach(h => { h.textContent = q.ans; h.classList.add("filled"); });
-      if (q.after) { card.append(el("div", "m-after", q.after)); await wait(300); await say(speakable(q.after)); }
-      else if (typeof q.ans === "number" && !q.wide) await sayNum(q.ans);
-      await wait(ok ? 500 : 900);
-      round.idx++; round.locked = false; renderRound();
+      finish(ok);
     };
     opts.append(b);
   }
   v.append(opts);
   speakQ(q);
+}
+// 依序點卡片：q.ans = 正確順序的 val 陣列。點錯會搖一下、可以再點，但這題不算答對。
+function orderOptions(q, card, opts, finish) {
+  let step = 0, missed = false;
+  const slots = card.querySelector(".m-slots");
+  q.opts.forEach(o => {
+    const b = el("button", "opt", o.html);
+    b.onclick = () => {
+      if (round.locked || b.classList.contains("ok")) return;
+      if (o.val !== q.ans[step]) {
+        missed = true; sfx.wrong(); b.classList.remove("bad"); void b.offsetWidth; b.classList.add("bad");
+        return;
+      }
+      b.classList.remove("bad"); b.classList.add("ok"); b.append(el("span", "m-step", String(step + 1)));
+      const sl = slots?.children[step]; if (sl) { sl.innerHTML = o.slot; sl.classList.add("filled"); }
+      say(o.say); step++;
+      if (step < q.ans.length) { sfx.tap(); return; }
+      round.locked = true;
+      if (!missed) { sfx.correct(); const r = card.getBoundingClientRect(); burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, n: 60 }); }
+      setTimeout(() => finish(!missed), 400);
+    };
+    opts.append(b);
+  });
 }
 function summary(v) {
   const c = round.correct, n = round.qs.length, stars = c === n ? 3 : c >= n * .6 ? 2 : 1;

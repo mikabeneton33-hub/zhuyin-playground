@@ -546,3 +546,9 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--sky); 
 .m-ev { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: var(--font); }
 .m-ev b { font-size: 17px; font-weight: 900; }
 .m-ev i { position: absolute; top: -6px; left: -6px; font-style: normal; font-size: 15px; font-weight: 900; color: #fff; background: var(--violet); border-radius: 8px; padding: 2px 7px; }
+.m-slots { display: flex; gap: 8px; justify-content: center; }
+.m-slots span { width: 54px; height: 54px; border-radius: 14px; border: 3px dashed var(--sunny); background: var(--sunny-2); display: grid; place-items: center; font-size: 24px; font-weight: 900; color: var(--sunny-3); }
+.m-slots span.filled { border-style: solid; border-color: var(--mint); background: var(--mint-2); }
+.m-slots .pic-md { width: 40px; height: 40px; }
+.opt .m-step { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: #fff; color: var(--mint-3); font-weight: 900; font-size: 16px; display: grid; place-items: center; }
+.m-opts .opt { position: relative; }

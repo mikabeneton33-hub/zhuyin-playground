@@ -58,7 +58,7 @@ export const UNITS = [
     { id: "U8-4", title: "加加減減", drills: [{ type: "mix", max: 10 }] },
   ]},
   { id: "U9", no: 9, title: "幾點鐘", page: 116, items: [
-    { id: "U9-1", title: "時間的先後和長短", drills: [{ type: "sequence" }, { type: "duration" }] },
+    { id: "U9-1", title: "時間的先後和長短", drills: [{ type: "seqorder" }, { type: "sequence" }, { type: "duration" }] },
     { id: "U9-2", title: "認識時鐘", drills: [{ type: "clock", mode: "hands" }] },
     { id: "U9-3", title: "幾點鐘", drills: [{ type: "clock", half: false }] },
     { id: "U9-4", title: "幾點半", drills: [{ type: "clock", half: true }] },
@@ -66,7 +66,7 @@ export const UNITS = [
   { id: "M2", exam: true, title: "期末評量", page: 128, items: [
     { id: "FIN", title: "期末評量", review: true, drills: [
       { type: "tens", max: 30, n: 1 }, { type: "bigger", max: 30, n: 1 }, { type: "order", max: 30, n: 1 }, { type: "add", max: 10, n: 2 },
-      { type: "sub", max: 10, n: 1 }, { type: "sequence", n: 1 }, { type: "clock", half: true, n: 1 },
+      { type: "sub", max: 10, n: 1 }, { type: "seqorder", n: 1 }, { type: "clock", half: true, n: 1 },
     ]},
   ]},
 ];
