@@ -37,22 +37,6 @@
 - PWA：含 manifest 和 service worker，可「加到主畫面」並離線使用。
 - 支援 `prefers-reduced-motion`，所有可點元素最小 44px，鍵盤可操作。
 
-## 參考站鏡像（`ref/`）
-
-`ref/` 底下是三個獨立靜態站的完整鏡像，只供參考研究，內容與權利屬原作者（陳乃誠／大乃老師，GitHub `hk6429`），各站權利說明見 `ref/naicheng-works/rights.html`。都是純相對路徑、無建置步驟，部署後各自可開：
-
-| 資料夾 | 原站 | 內容 |
-|---|---|---|
-| `ref/naicheng-works-island/` | naicheng-works-island.pages.dev | 大乃作品島：112 件作品的 3D 島嶼地圖（three.js），含文字導覽與作品總覽 |
-| `ref/naicheng-island/` | naicheng-island.pages.dev | 陳乃誠島：個人介紹的 3D 島嶼（three.js） |
-| `ref/naicheng-works/` | naicheng-works.pages.dev | 大乃學習工具箱：作品入口的文書版，含 112 張截圖、112 張 QR、作品資料 `data/sites.js` 與權利頁 |
-
-鏡像時的調整：
-
-- 原站的 GoatCounter 到訪統計會把流量送進原作者帳號，兩個島嶼站改為只在原正式網域觸發，工具箱站直接移除統計腳本。
-- 兩個島嶼站的作品截圖與 QR 仍由原站 `naicheng-works.pages.dev/assets/` 載入，未改指向本地副本。
-- 注音樂園的 service worker 不快取 `ref/` 底下的請求，互不影響。
-
 ## 部署到 GitHub Pages
 
 1. Repo → **Settings → Pages**。
