@@ -56,11 +56,20 @@ export function go(name, push = true) {
   scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// 姊妹站：注音學完的下一站。另一個網站，所以用連結而不是科目按鈕。
+const SISTER_SITES = [{ name: "字 國字樂園", url: "https://mikabeneton33-hub.github.io/guozi-playground/", title: "一年級國字：生字卡、描寫、聽寫（另一個網站）" }];
+
 export function mountSubjectSwitch() {
   const seg = $("#subjectseg"); seg.innerHTML = "";
   for (const s of subjects()) {
     const b = el("button", "", s.name); b.dataset.s = s.id;
     b.onclick = () => { sfx.tap(); if (s.id !== currentSubject().id) go(s.home); };
     seg.append(b);
+  }
+  for (const x of SISTER_SITES) {
+    const a = el("a", "sister", `${x.name}<span aria-hidden="true">↗</span>`);
+    a.href = x.url; a.title = x.title; a.setAttribute("aria-label", `${x.name}（開啟另一個網站）`);
+    a.onclick = () => sfx.tap();
+    seg.append(a);
   }
 }
