@@ -37,6 +37,15 @@
 - PWA：含 manifest 和 service worker，可「加到主畫面」並離線使用。
 - 支援 `prefers-reduced-motion`，所有可點元素最小 44px，鍵盤可操作。
 
+## 子站：大乃作品島（`island/`）
+
+`island/` 是從 https://naicheng-works-island.pages.dev/ 搬進來的獨立靜態站：112 件教學與自學作品的 3D 島嶼地圖（three.js），含 `index.html`（3D 地圖）、`guide.html`（文字版導覽）、`works.html`（作品總覽）。部署後網址為 `https://<帳號>.github.io/zhuyin-playground/island/`。
+
+- 全部相對路徑，three.js 隨 repo 自帶於 `island/vendor/three/`，無建置步驟。
+- 作品截圖與 QR 圖仍由原站 `naicheng-works.pages.dev/assets/` 載入，沒有複製進來。
+- 到訪人次的 GoatCounter 計數只在原站兩個正式網域觸發，鏡像站不送統計。
+- 注音樂園的 service worker 不快取 `island/` 底下的請求，兩站互不影響。
+
 ## 部署到 GitHub Pages
 
 1. Repo → **Settings → Pages**。
