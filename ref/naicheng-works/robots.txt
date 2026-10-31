@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://naicheng-works.pages.dev/sitemap.xml

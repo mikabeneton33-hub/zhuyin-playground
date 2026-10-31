@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" role="img" aria-labelledby="title desc">
+  <title id="title">學測・指考英文題庫</title>
+  <desc id="desc">靛藍色英文文字背景與題庫功能摘要</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#172554"/>
+      <stop offset=".52" stop-color="#3730a3"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".98"/>
+      <stop offset="1" stop-color="#f3f0ff" stop-opacity=".95"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#11143b" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <rect width="1280" height="800" fill="url(#bg)"/>
+  <circle cx="96" cy="65" r="225" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="2"/>
+  <circle cx="1180" cy="750" r="270" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="2"/>
+  <g fill="#ddd6fe" fill-opacity=".15" font-family="Georgia, serif" font-style="italic">
+    <text x="76" y="190" font-size="88">A–D</text>
+    <text x="855" y="112" font-size="48">context</text>
+    <text x="980" y="235" font-size="46">reading</text>
+    <text x="120" y="705" font-size="46">evidence → answer</text>
+    <text x="900" y="720" font-size="48">Why?</text>
+  </g>
+  <g transform="translate(98 92)">
+    <text x="0" y="0" fill="#c4b5fd" font-family="'Noto Sans TC','PingFang TC',sans-serif" font-size="25" font-weight="700" letter-spacing="7">大學學測・指考・歷屆試題</text>
+    <text x="0" y="78" fill="#fafaff" font-family="'Noto Serif TC','Songti TC',serif" font-size="66" font-weight="700" letter-spacing="8">學測・指考英文題庫</text>
+    <text x="3" y="127" fill="#e0e7ff" font-family="'Noto Sans TC','PingFang TC',sans-serif" font-size="26">學測 83～115 年・指考 91～110 年</text>
+  </g>
+  <g transform="translate(98 300)" filter="url(#shadow)">
+    <rect width="1084" height="350" rx="30" fill="url(#card)"/>
+    <g transform="translate(55 55)" font-family="'Noto Sans TC','PingFang TC',sans-serif">
+      <text fill="#4338ca" font-size="25" font-weight="700" letter-spacing="3">分類練習 × 白話解析</text>
+      <text y="51" fill="#22283a" font-size="31" font-weight="700">先找線索，再比較每個選項為什麼對或錯</text>
+      <g transform="translate(0 105)">
+        <rect width="298" height="96" rx="16" fill="#eeeafe"/>
+        <text x="26" y="39" fill="#4338ca" font-size="22" font-weight="700">53 份正式試卷</text>
+        <text x="26" y="72" fill="#5f6475" font-size="19">共 2,850 題</text>
+      </g>
+      <g transform="translate(327 105)">
+        <rect width="298" height="96" rx="16" fill="#e8efff"/>
+        <text x="26" y="39" fill="#3453a4" font-size="22" font-weight="700">國中生友善解析</text>
+        <text x="26" y="72" fill="#5f6475" font-size="19">十位英文教育專家分工</text>
+      </g>
+      <g transform="translate(654 105)">
+        <rect width="320" height="96" rx="16" fill="#f1eafd"/>
+        <text x="26" y="39" fill="#7137a8" font-size="22" font-weight="700">官方統計資料</text>
+        <text x="26" y="72" fill="#5f6475" font-size="19">答對率・鑑別度・選項分析</text>
+      </g>
+      <text x="0" y="270" fill="#5f6475" font-size="20">免登入・錯題與學習歷程只保存在自己的瀏覽器</text>
+    </g>
+  </g>
+</svg>
