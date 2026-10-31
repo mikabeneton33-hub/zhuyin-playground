@@ -1,5 +1,5 @@
 // 離線快取：第一次開過之後，沒網路也能玩。
-const CACHE = "zp-v15";
+const CACHE = "zp-v16";
 const ASSETS = ["./", "./index.html", "./css/style.css", "./manifest.webmanifest", "./icons/icon.svg",
   "./js/app.js", "./js/core/ui.js", "./js/core/router.js", "./js/core/audio.js", "./js/core/voice_map.js", "./js/core/store.js", "./js/core/confetti.js", "./js/core/daily.js",
   "./js/subjects/zhuyin/index.js", "./js/subjects/zhuyin/data.js", "./js/subjects/zhuyin/animals.js", "./js/subjects/zhuyin/textbook.js", "./js/subjects/zhuyin/play.js",

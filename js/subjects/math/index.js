@@ -75,6 +75,57 @@ function clockSVG(h, half) {
 }
 const clockLabel = (h, half) => `${h} 點${half ? "半" : ""}`;
 
+// ---------------------------------------------------------------- 做造型、時間的先後和長短 素材
+const PLANE = { circle: "圓形", triangle: "三角形", square: "正方形", rect: "長方形" };
+const OBJ = { "🥫": "罐頭", "🥁": "鼓", "🧻": "衛生紙", "🔋": "電池", "🎲": "骰子", "🧊": "冰塊", "📦": "紙箱", "🧱": "磚塊", "🧀": "起司", "🍰": "蛋糕", "⚽": "足球" };
+// 描得出這個形狀的東西；clash = 也可能描出相同形狀、不能當錯誤選項的類別
+const FACES = {
+  circle: { name: "圓形", items: ["🥫", "🥁", "🧻", "🔋"] },
+  square: { name: "正方形", items: ["🎲", "🧊"], clash: ["rect"] },
+  rect: { name: "長方形", items: ["📦", "🧱"], clash: ["square"] },
+  triangle: { name: "三角形", items: ["🧀", "🍰"] },
+};
+// 用平面圖形拼成的機器人，回傳 SVG 與各形狀數量
+function robot() {
+  const count = { circle: 0, triangle: 0, square: 0, rect: 0 }, parts = [];
+  const add = (k, x, y, w, h, c) => {
+    count[k]++;
+    const col = c || pick(COLORS);
+    parts.push(k === "circle" ? `<circle cx="${x + w / 2}" cy="${y + h / 2}" r="${Math.min(w, h) / 2}" fill="${col}"/>`
+      : k === "square" ? `<rect x="${x + (w - Math.min(w, h)) / 2}" y="${y + (h - Math.min(w, h)) / 2}" width="${Math.min(w, h)}" height="${Math.min(w, h)}" fill="${col}"/>`
+      : k === "triangle" ? `<polygon points="${x + w / 2},${y} ${x + w},${y + h} ${x},${y + h}" fill="${col}"/>`
+      : `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${col}"/>`);
+  };
+  const ant = rint(0, 2), ak = pick(["triangle", "circle"]);
+  if (ant === 1) add(ak, 92, 2, 16, 16); if (ant === 2) { add(ak, 72, 2, 16, 16); add(ak, 112, 2, 16, 16); }
+  const head = pick(["square", "circle"]); add(head, 66, 18, 68, 68, "#54A0FF");
+  const ek = pick(["circle", "square", "triangle"]); add(ek, 80, 38, 14, 14, "#fff"); add(ek, 106, 38, 14, 14, "#fff");
+  if (Math.random() < 0.5) add("rect", 86, 64, 28, 8, "#FF6B6B");
+  add("rect", 56, 92, 88, 72, "#6C5CE7");
+  add("rect", 22, 102, 32, 12, "#2BC4B6"); add("rect", 146, 102, 32, 12, "#2BC4B6");
+  const bn = rint(1, 3), bk = pick(["circle", "square", "triangle"]);
+  for (let i = 0; i < bn; i++) add(bk, 92, 100 + i * 20, 16, 16, "#FFC94A");
+  const fk = pick(["triangle", "square", "rect"]);
+  if (fk === "rect") { add(fk, 54, 172, 40, 18, "#FF6B6B"); add(fk, 106, 172, 40, 18, "#FF6B6B"); } else { add(fk, 62, 168, 30, 26, "#FF6B6B"); add(fk, 108, 168, 30, 26, "#FF6B6B"); }
+  return { svg: `<svg class="m-robot" viewBox="0 0 200 200">${parts.join("")}</svg>`, count };
+}
+// 事情的先後（依發生順序）
+const SEQS = [
+  { name: "早上去上學", steps: [["🛏", "起床"], ["🪥", "刷牙"], ["🍳", "吃早餐"], ["🏫", "上學"]] },
+  { name: "小雞長大", steps: [["🥚", "雞蛋"], ["🐣", "破殼"], ["🐤", "小雞"], ["🐔", "大雞"]] },
+  { name: "種向日葵", steps: [["🌰", "種子"], ["🌱", "發芽"], ["🌿", "長葉子"], ["🌻", "開花"]] },
+  { name: "吃晚餐", steps: [["🧼", "洗手"], ["🍚", "吃飯"], ["🪥", "刷牙"]] },
+  { name: "一天", steps: [["🌅", "早上"], ["☀", "中午"], ["🌙", "晚上"]] },
+  { name: "準備睡覺", steps: [["🛁", "洗澡"], ["👕", "換衣服"], ["😴", "睡覺"]] },
+  { name: "出門", steps: [["🧦", "穿襪子"], ["👟", "穿鞋子"], ["🚶", "出門"]] },
+];
+// 時間的長短：[花的時間短, 花的時間長]
+const DURS = [
+  [["👁", "眨一下眼睛"], ["😴", "睡一晚覺"]], [["🧼", "洗手"], ["🛁", "洗澡"]], [["🍬", "吃一顆糖"], ["🍚", "吃一頓飯"]],
+  [["🧦", "穿襪子"], ["🏫", "上一天學"]], [["🚪", "走到門口"], ["✈", "坐飛機出國"]], [["🥛", "喝一口牛奶"], ["🎬", "看一場電影"]],
+  [["🪥", "刷牙"], ["📝", "寫完作業"]], [["🍞", "吃一片麵包"], ["🌻", "種子長成花"]], [["🧹", "掃一下地"], ["🧺", "洗全家的衣服"]],
+];
+
 // ---------------------------------------------------------------- 題型
 // d = 單一 drill 設定 { type, max, min, ... }（見 curriculum.js）
 const GEN = {
@@ -202,6 +253,34 @@ const GEN = {
     return { html: `${showPics ? o : ""}<div class="m-eq">${a} − ${b} = <span class="hole">?</span></div>`, speak: `${zh(a)}減${zh(b)}等於多少？`, ans, opts: numOpts(ans, 0, d.max), after: `${a} − ${b} = ${ans}` };
   },
   mix(d) { return Math.random() < 0.5 ? GEN.add(d) : GEN.sub(d); },
+  trace() { // 做造型：用哪一個東西的面可以描出這個形狀
+    const k = pick(Object.keys(FACES)), ok = pick(FACES[k].items);
+    const pool = Object.entries(FACES).filter(([x]) => x !== k && !(FACES[k].clash || []).includes(x)).flatMap(([, f]) => f.items);
+    const opts = shuffle([ok, ...shuffle(pool).slice(0, 1), "⚽"]).map(e => ({ val: e, html: `<span class="m-optlbl">${pic(e, "pic-lg")}${OBJ[e]}</span>` }));
+    return { html: `<div class="m-solid">${shapeSVG(k)}</div><div class="m-q">用哪一個東西的面，可以描出這個${FACES[k].name}？</div>`,
+      speak: `用哪一個東西的面，可以描出這個${FACES[k].name}？`, ans: ok, opts, cls: "three", after: `${OBJ[ok]}有一面是${FACES[k].name}；球沒有平平的面` };
+  },
+  design() { // 做造型：數一數造型裡每種形狀有幾個
+    const { svg, count } = robot(), kinds = Object.keys(count).filter(x => count[x] > 0), k = pick(kinds), ans = count[k];
+    return { html: `<div class="m-solid">${svg}</div><div class="m-q">這個造型裡，<b class="m-more">${PLANE[k]}</b>有幾個？</div>`,
+      speak: `這個造型裡，${PLANE[k]}有幾個？`, ans, opts: numOpts(ans, 1, Math.max(ans + 2, 5)), after: kinds.map(x => `${PLANE[x]} ${count[x]} 個`).join("、") };
+  },
+  sequence() { // 時間的先後
+    const sq = pick(SEQS), n = sq.steps.length, order = shuffle(sq.steps.map((_, i) => i));
+    const card = (i, j) => ({ val: i, html: `<span class="m-ev"><i>${"ㄅㄆㄇㄈ"[j]}</i>${pic(sq.steps[i][0], "pic-lg")}<b>${sq.steps[i][1]}</b></span>` });
+    const r = Math.random(); let q, ans;
+    if (r < 0.35) { q = "最先發生的是哪一個？"; ans = 0; }
+    else if (r < 0.65) { q = "最後發生的是哪一個？"; ans = n - 1; }
+    else { const x = rint(0, n - 2); q = `「${sq.steps[x][1]}」的下一步是哪一個？`; ans = x + 1; }
+    return { html: `<div class="m-q">${sq.name}：${q}</div>`, speak: `${sq.name}，${q}`, ans, opts: order.map(card), wide: true, cls: n === 3 ? "three" : "",
+      after: sq.steps.map(x => x[1]).join(" → ") };
+  },
+  duration() { // 時間的長短
+    const [a, b] = pick(DURS), long = Math.random() < 0.5, ans = long ? 1 : 0;
+    const card = (x, i) => ({ val: i, html: `<span class="m-ev">${pic(x[0], "pic-lg")}<b>${x[1]}</b></span>` });
+    return { html: `<div class="m-q">哪一件事花的時間比較<b class="${long ? "m-more" : "m-less"}">${long ? "長" : "短"}</b>？</div>`, speak: `哪一件事花的時間比較${long ? "長" : "短"}？`, ans,
+      opts: shuffle([card(a, 0), card(b, 1)]), wide: true, after: `${b[1]}比${a[1]}花的時間長` };
+  },
   clock(d) {
     const h = rint(1, 12), half = d.half ? Math.random() < 0.6 : false;
     if (d.mode === "hands") {
@@ -228,10 +307,12 @@ const TYPES = [
   { type: "line", icon: "〰️", name: "直線和曲線", desc: "哪一條是直的？", color: "sky" },
   { type: "split", icon: "🔵", name: "分與合", desc: "幾可以分成幾和幾", color: "coral", drills: [{ type: "split", max: 10 }, { type: "join", max: 10 }] },
   { type: "solid", icon: "📦", name: "方盒圓罐球", desc: "立體和平面圖形", color: "violet", drills: [{ type: "solid" }, { type: "plane" }] },
+  { type: "design", icon: "🤖", name: "做造型", desc: "描形狀、數一數圖形", color: "mint", drills: [{ type: "trace" }, { type: "design" }] },
   { type: "tens", icon: "🔟", name: "30 以內的數", desc: "十個一排、比大小", color: "sunny", drills: [{ type: "tens", max: 30 }, { type: "bigger", max: 30 }] },
   { type: "add", icon: "➕", name: "加法", desc: "合起來是多少", color: "mint", ranged: true },
   { type: "sub", icon: "➖", name: "減法", desc: "拿走後剩多少", color: "violet", ranged: true },
   { type: "diff", icon: "🐾", name: "多多少、少多少", desc: "兩排比一比", color: "sky", ranged: true },
+  { type: "sequence", icon: "🐣", name: "先後和長短", desc: "誰先誰後、哪個比較久", color: "sunny", drills: [{ type: "sequence" }, { type: "duration" }] },
   { type: "clock", icon: "🕒", name: "幾點鐘", desc: "幾點、幾點半", color: "coral", drills: [{ type: "clock", half: true }] },
 ];
 
@@ -341,8 +422,7 @@ function viewMap() {
   });
   v.append(map);
   drawMapPath(map, nodes);
-  const skipped = UNITS.flatMap(u => (u.skip || []).map(s => `${u.title}「${s}」`));
-  v.append(el("p", "credit", `單元與小節依《${BOOK.name} ${BOOK.src}》目次與學習地圖，頁碼為該書頁碼。題目由本站程式產生，未收錄書中題目與插圖。${skipped.length ? `需要情境圖或動手操作的小節未做成關卡：${skipped.join("、")}。` : ""}`));
+  v.append(el("p", "credit", `單元與小節依《${BOOK.name} ${BOOK.src}》目次與學習地圖，頁碼為該書頁碼。題目由本站程式產生，未收錄書中題目與插圖。`));
 }
 
 // ---------------------------------------------------------------- 自由練習

@@ -1,10 +1,9 @@
 // 數學・一年級上學期 闖關地圖。
-// 單元與小節依《國小數學 1上 學習自修》目次與各單元「學習地圖」（page = 自修頁碼）。
+// 單元與小節依康軒版《國小數學 1上 學習自修》目次與各單元「學習地圖」（page = 自修頁碼）。
 // 只收錄結構（單元名、小節名、頁碼）；題目全部由本站程式產生，不收錄書中題目與插圖。
 //
 // 小節格式：{ id, title, drills: [{ type, max, ...參數 }] }，題型見 index.js 的 GEN。
-// 需要情境圖或實際操作的小節（時間的先後和長短、做造型）沒有做成關卡，仍列在 skip 方便日後補。
-export const BOOK = { name: "國小數學 1上", src: "學習自修", grade: "一年級上學期" };
+export const BOOK = { name: "康軒版 國小數學 1上", src: "學習自修", grade: "一年級上學期" };
 
 export const UNITS = [
   { id: "U1", no: 1, title: "10以內的數", page: 4, items: [
@@ -32,11 +31,12 @@ export const UNITS = [
   { id: "U5", no: 5, title: "方盒、圓罐、球", page: 56, items: [
     { id: "U5-1", title: "堆疊與分類", drills: [{ type: "solid" }] },
     { id: "U5-2", title: "認識平面圖形", drills: [{ type: "plane" }] },
-  ], skip: ["做造型"] },
+    { id: "U5-3", title: "做造型", drills: [{ type: "trace" }, { type: "design" }] },
+  ]},
   { id: "M1", exam: true, title: "期中評量", page: 70, items: [
     { id: "MID", title: "期中評量", review: true, drills: [
       { type: "count", max: 10, n: 1 }, { type: "length", mode: "long", n: 1 }, { type: "line", n: 1 }, { type: "ordinal", n: 1 },
-      { type: "compare", max: 10, n: 1 }, { type: "split", max: 10, n: 1 }, { type: "solid", n: 1 }, { type: "plane", n: 1 },
+      { type: "compare", max: 10, n: 1 }, { type: "split", max: 10, n: 1 }, { type: "solid", n: 1 }, { type: "design", n: 1 },
     ]},
   ]},
   { id: "U6", no: 6, title: "30以內的數", page: 74, items: [
@@ -58,14 +58,15 @@ export const UNITS = [
     { id: "U8-4", title: "加加減減", drills: [{ type: "mix", max: 10 }] },
   ]},
   { id: "U9", no: 9, title: "幾點鐘", page: 116, items: [
+    { id: "U9-1", title: "時間的先後和長短", drills: [{ type: "sequence" }, { type: "duration" }] },
     { id: "U9-2", title: "認識時鐘", drills: [{ type: "clock", mode: "hands" }] },
     { id: "U9-3", title: "幾點鐘", drills: [{ type: "clock", half: false }] },
     { id: "U9-4", title: "幾點半", drills: [{ type: "clock", half: true }] },
-  ], skip: ["時間的先後和長短"] },
+  ]},
   { id: "M2", exam: true, title: "期末評量", page: 128, items: [
     { id: "FIN", title: "期末評量", review: true, drills: [
       { type: "tens", max: 30, n: 1 }, { type: "bigger", max: 30, n: 1 }, { type: "order", max: 30, n: 1 }, { type: "add", max: 10, n: 2 },
-      { type: "sub", max: 10, n: 2 }, { type: "clock", half: true, n: 1 },
+      { type: "sub", max: 10, n: 1 }, { type: "sequence", n: 1 }, { type: "clock", half: true, n: 1 },
     ]},
   ]},
 ];

@@ -542,3 +542,7 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--sky); 
 .m-lineup > div > .pic { width: auto; height: auto; aspect-ratio: 1; }
 .m-objs.row { width: 100%; gap: 3px; }
 .m-objs.row > span .pic-md { width: 100%; height: auto; aspect-ratio: 1; }
+.m-robot { width: 210px; height: 210px; }
+.m-ev { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: var(--font); }
+.m-ev b { font-size: 17px; font-weight: 900; }
+.m-ev i { position: absolute; top: -6px; left: -6px; font-style: normal; font-size: 15px; font-weight: 900; color: #fff; background: var(--violet); border-radius: 8px; padding: 2px 7px; }
