@@ -178,7 +178,7 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--sky); 
 /* ---- tabbar ---- */
 .tabbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); height: var(--tab-h);
   background: rgba(255, 255, 255, .92); backdrop-filter: blur(14px); border-radius: 26px; box-shadow: 0 16px 40px -14px rgba(43, 45, 66, .35);
-  display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px; z-index: 30; }
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 6px; z-index: 30; }
 .tab { border-radius: 20px; padding: 0 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 800; color: var(--ink-2); transition: all .2s var(--ease); }
 .tab .ic { font-size: 24px; line-height: 1; transition: transform .25s var(--ease); }
 .tab.on { color: var(--ink); background: var(--sunny-2); }
@@ -457,3 +457,39 @@ button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--sky); 
 .write-meter.messy span { color: var(--coral-3); }
 .pills.speed { align-items: center; }
 .pills.speed .pill { padding: 8px 14px; font-size: 14px; }
+
+/* ================= 科目切換 ================= */
+.subjects { display: flex; gap: 8px; margin: -8px 0 14px; overflow-x: auto; scrollbar-width: none; }
+.subjects::-webkit-scrollbar { display: none; }
+.subjects button { flex: 0 0 auto; min-height: 44px; padding: 8px 18px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); font-weight: 900; font-size: 15px; color: var(--ink-2); white-space: nowrap; transition: all .2s var(--ease); }
+.subjects button.on { background: var(--coral); color: #fff; }
+
+/* ================= 數學 ================= */
+.m-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 14px; margin-bottom: 12px; text-align: center; display: grid; gap: 12px; justify-items: center; }
+.m-q { font-size: 20px; font-weight: 900; }
+.m-q b { font-size: 28px; padding: 0 4px; } .m-more { color: var(--coral); } .m-less { color: var(--sky); }
+.m-big { font-size: 72px; line-height: 1; }
+.m-objs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 340px; }
+.m-objs .pic-md { width: 44px; height: 44px; }
+.m-objs.sm { gap: 3px; max-width: 160px; } .m-objs.sm .pic-md { width: 30px; height: 30px; }
+.m-objs .gone { position: relative; opacity: .35; }
+.m-objs .gone::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--coral); font-weight: 900; font-size: 26px; opacity: 1; }
+.m-pics { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.m-op { font-size: 34px; font-weight: 900; color: var(--violet); }
+.m-eq { font-family: var(--display); font-size: 38px; font-weight: 700; letter-spacing: 1px; }
+.m-eq, .m-seq { white-space: nowrap; }
+.hole { display: inline-block; min-width: 1.3em; border-radius: 12px; background: var(--sunny-2); color: var(--sunny-3); padding: 0 6px; }
+.hole.filled { background: var(--mint-2); color: var(--mint-3); }
+.m-seq { display: flex; gap: 6px; justify-content: center; }
+.m-cell { width: 52px; height: 58px; border-radius: 14px; background: var(--sky-2); display: grid; place-items: center; font-family: var(--display); font-size: 30px; font-weight: 700; }
+.m-cell.hole { background: var(--sunny-2); color: var(--sunny-3); }
+.m-dots { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 300px; }
+.m-dots i { width: 30px; height: 30px; border-radius: 50%; border: 4px solid var(--violet); }
+.m-dots i.on { background: var(--coral); border-color: var(--coral); }
+.m-after { font-weight: 900; font-size: 20px; color: var(--mint-3); }
+.m-tools { justify-content: center; margin-bottom: 12px; }
+.m-opts .opt { font-family: var(--display); }
+.m-opts.wide { grid-template-columns: repeat(2, 1fr) !important; }
+.m-opts.wide .opt { height: auto; min-height: 150px; padding: 12px; }
+.m-cap { font-size: 14px; font-weight: 900; }
+@media (max-width: 400px) { .m-eq { font-size: 32px; } .m-cell { width: 46px; height: 52px; font-size: 26px; } }

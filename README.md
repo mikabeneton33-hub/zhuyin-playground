@@ -1,8 +1,10 @@
-# ㄅㄆㄇ 注音樂園 · Zhuyin Playground
+# 小一學習樂園 · Playground（repo：zhuyin-playground）
 
-給學齡前到國小低年級小朋友的注音符號學習網站。純靜態、免安裝、免登入，手機、平板、電腦都能玩，第一次開過之後離線也能用。
+給學齡前到國小低年級小朋友的學習網站，目前有**國語（注音）**與**數學**兩科。純靜態、免安裝、免登入，手機、平板、電腦都能玩，第一次開過之後離線也能用。
 
-## 功能
+頂端切換科目，底部分頁隨科目變換。星星、貼紙、每日任務、連續天數全科共用。
+
+## 國語（注音）
 
 底部五個分頁：
 
@@ -27,9 +29,46 @@
 
 獎勵：每日三個任務、連續天數、課本過關／全對／任務完成可得動物貼紙。
 
+## 數學（一上）
+
+| 分頁 | 內容 |
+|---|---|
+| 闖關 | 8 關：數到 5、數到 10、比多少、數字排排站、分與合、加法、減法、加減大挑戰。答對 6 成過關解鎖下一關。 |
+| 練習 | 8 種題型自由選，範圍 5／10／20 以內。 |
+| 我的 | 與國語共用，加上數學過關數與答對率。 |
+
+題目全部由程式即時產生（`js/subjects/math/index.js` 的 `GEN`）。0–10 的數字在「真人」模式用教育部辭典錄音，算式用合成語音。
+
+> 目前關卡是**通用版**，尚未對照特定出版社課本。課本單元對照只要改 `js/subjects/math/curriculum.js`（`BOOK`、`STAGES`），程式不用動。
+
+## 架構與新增科目
+
+```
+js/
+  app.js                 殼層：載入科目、頂欄、啟動
+  core/                  全科共用
+    router.js            科目註冊、分頁列、#hash 路由
+    store.js             進度（localStorage）；新科目紀錄放 data.subj[<id>]
+    daily.js             每日任務卡
+    audio.js voice_map.js 真人／合成發音、音效
+    ui.js confetti.js    DOM 小工具、插圖、彩帶
+  subjects/
+    zhuyin/              國語：data / textbook / animals / play / index
+    math/                數學：curriculum（關卡資料）/ index（題型與畫面）
+```
+
+新增一科（例：小一下數學、生活、英語）：
+
+1. 建 `js/subjects/<id>/index.js`，呼叫 `registerSubject({ id, name, logo, home, tabs, views, progressSection? })`。view 名稱即網址 `#hash`，全站唯一，請加科目前綴。
+2. 需要每日任務就 `registerTasks([{ id, goal, icon, label, go, subj: "<id>" }])`；每天自動從注音抽 2 個、其他科各抽 1 個。
+3. 在 `js/app.js` 加一行 `import "./subjects/<id>/index.js";`。
+4. 把新檔案加進 `sw.js` 的 `ASSETS`，並把 `CACHE` 版本號 +1。
+
+其他年級、學期（一下、二上…）放同一科目資料夾，用不同 curriculum 檔切換，不要另開 repo。
+
 ## 技術
 
-- 單純 HTML / CSS / JavaScript（ES modules），沒有框架、沒有建置步驟。
+- 單純 HTML / CSS / JavaScript（ES modules），沒有框架、沒有建置步驟。原本 `#learn`、`#book` 等網址與舊進度都不變。
 - 發音有兩種模式，右上角「真人／合成」切換：
   - **真人**（預設）：教育部《國語辭典簡編本》的真人錄音，經萌典取得，CC BY-ND 3.0 TW。只收錄讀音與本站注音完全一致的錄音，並只擷取開頭朗讀詞目的段落，不更動內容。約 97% 的字詞有錄音，其餘自動改用合成語音。
   - **合成**：瀏覽器內建 `speechSynthesis`（zh-TW）。
