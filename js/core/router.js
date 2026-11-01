@@ -56,8 +56,8 @@ export function go(name, push = true) {
   scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// 姊妹站：注音學完的下一站。另一個網站，所以用連結而不是科目按鈕。
-const SISTER_SITES = [{ name: "字 國字樂園", url: "https://mikabeneton33-hub.github.io/guozi-playground/", title: "一年級國字：生字卡、描寫、聽寫（另一個網站）" }];
+// 回到「小一學習樂園」入口（網域根目錄），注音、國字、數學三個樂園都從那裡進。
+const SISTER_SITES = [{ name: "⌂ 全部樂園", url: "../", title: "回到入口：注音樂園、國字樂園、數學樂園" }];
 
 export function mountSubjectSwitch() {
   const seg = $("#subjectseg"); seg.innerHTML = "";
@@ -67,8 +67,8 @@ export function mountSubjectSwitch() {
     seg.append(b);
   }
   for (const x of SISTER_SITES) {
-    const a = el("a", "sister", `${x.name}<span aria-hidden="true">↗</span>`);
-    a.href = x.url; a.title = x.title; a.setAttribute("aria-label", `${x.name}（開啟另一個網站）`);
+    const a = el("a", "sister", x.name);
+    a.href = x.url; a.title = x.title; a.setAttribute("aria-label", "回到全部樂園入口");
     a.onclick = () => sfx.tap();
     seg.append(a);
   }
